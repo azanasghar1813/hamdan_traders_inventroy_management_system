@@ -1,0 +1,103 @@
+const Product = require('../models/Product');
+const Sale = require('../models/Sale');
+const Purchase = require('../models/Purchase');
+const StockMovement = require('../models/StockMovement');
+
+// @desc    Get dashboard statistics
+// @route   GET /api/dashboard
+// @access  Private
+const getDashboardStats = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // 1. Total Products Count
+    const totalProducts = await Product.countDocuments({ isActive: true });
+
+    // 2. Low Stock Count
+    const lowStockCount = await Product.countDocuments({
+      $expr: { $lte: ['$currentStock', '$minimumStock'] },
+      isActive: true
+    });
+
+    // 3. Today's Sales Total
+    const todaySales = await Sale.aggregate([
+      { $match: { date: { $gte: today } } },
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ]);
+    const todaySalesAmount = todaySales.length > 0 ? todaySales[0].total : 0;
+
+    // 4. Monthly Sales Total
+    const monthlySales = await Sale.aggregate([
+      { $match: { date: { $gte: firstDayOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ]);
+    const monthlySalesAmount = monthlySales.length > 0 ? monthlySales[0].total : 0;
+
+    // 5. Monthly Purchases Total
+    const monthlyPurchases = await Purchase.aggregate([
+      { $match: { date: { $gte: firstDayOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ]);
+    const monthlyPurchasesAmount = monthlyPurchases.length > 0 ? monthlyPurchases[0].total : 0;
+
+    // 6. Recent Sales (Last 5)
+    const recentSales = await Sale.find()
+      .populate('customerId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // 7. Last 7 Days Sales Trend (for Chart)
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
+
+    const salesTrend = await Sale.aggregate([
+      { $match: { date: { $gte: sevenDaysAgo } } },
+      { 
+        $group: { 
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
+          total: { $sum: "$grandTotal" } 
+        } 
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Format chart data to include empty days
+    const chartData = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysAgo);
+      d.setDate(sevenDaysAgo.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const found = salesTrend.find(s => s._id === dateStr);
+      chartData.push({
+        date: dateStr,
+        sales: found ? found.total : 0
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalProducts,
+          lowStockCount,
+          todaySalesAmount,
+          monthlySalesAmount,
+          monthlyPurchasesAmount
+        },
+        recentSales,
+        chartData
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = {
+  getDashboardStats
+};
