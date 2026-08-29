@@ -133,7 +133,7 @@ const ProductsPage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 responsive-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -166,34 +166,35 @@ const ProductsPage = () => {
             ) : (
               products.map((product) => (
                 <tr key={product._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                  <div className="text-xs text-gray-500">Unit: {product.unit}</div>
+                <td data-label="Product" className="px-6 py-4">
+                  <div className="flex flex-col text-right">
+                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <div className="text-xs text-gray-500">Unit: {product.unit}</div>
+                  </div>
                 </td>
-
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                <td data-label="Purchase Price" className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                   {product.purchasePrice}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                <td data-label="Sale Price" className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                   {product.salePrice}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                <td data-label="Current Stock" className="px-6 py-4 whitespace-nowrap text-sm text-right">
                   <span className={`font-bold ${product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}`}>
                     {product.currentStock}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                <td data-label="Min Stock" className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
                   {product.minimumStock}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td data-label="Expiry" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {product.expiryDate ? new Date(product.expiryDate).toLocaleDateString() : '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {product.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 mr-3">
                     Edit
                   </button>

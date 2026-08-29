@@ -9,7 +9,6 @@ const getAlerts = async (req, res) => {
     // Using aggregation or simple find. We need where currentStock <= minimumStock
     const lowStockProducts = await Product.find({
       $expr: { $lte: ['$currentStock', '$minimumStock'] },
-      minimumStock: { $gt: 0 },
       isActive: true
     }).populate('categoryId', 'name');
 

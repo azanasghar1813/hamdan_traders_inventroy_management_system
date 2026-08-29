@@ -113,7 +113,7 @@ const UsersPage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 responsive-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -143,8 +143,8 @@ const UsersPage = () => {
             ) : (
               users.map(user => (
                 <tr key={user._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
+                  <td data-label="Name" className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center justify-end">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <FiUser className="h-5 w-5 text-blue-600" />
                       </div>
@@ -153,18 +153,18 @@ const UsersPage = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td data-label="Email" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                  <td data-label="Role" className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td data-label="Status" className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {user.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
                       onClick={() => toggleStatus(user)}
                       className={`mr-4 ${user.isActive ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}

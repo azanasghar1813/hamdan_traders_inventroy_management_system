@@ -114,7 +114,7 @@ const CustomersPage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 responsive-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -143,22 +143,24 @@ const CustomersPage = () => {
             ) : (
               customers.map((customer) => (
                 <tr key={customer._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                  <div className="text-xs text-gray-500">{customer.address || '-'}</div>
+                <td data-label="Name" className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex flex-col text-right">
+                    <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                    <div className="text-xs text-gray-500">{customer.address || '-'}</div>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.phone || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                <td data-label="Contact" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.phone || '-'}</td>
+                <td data-label="Current Balance" className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                   <span className={customer.currentBalance > 0 ? 'text-red-600' : 'text-gray-900'}>
                     Rs. {customer.currentBalance.toLocaleString()}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {customer.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button onClick={() => openModal(customer)} className="text-blue-600 hover:text-blue-900 mr-3">
                     <FiEdit className="inline" /> Edit
                   </button>

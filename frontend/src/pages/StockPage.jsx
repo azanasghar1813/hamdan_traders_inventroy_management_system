@@ -106,7 +106,7 @@ const StockPage = () => {
           </div>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 responsive-table">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -119,27 +119,27 @@ const StockPage = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.map((product) => (
                   <tr key={product._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td data-label="Product" className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{product.name}</div>
 
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
+                    <td data-label="Current Stock" className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
                       <span className={product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}>
                         {product.currentStock} {product.unit}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                    <td data-label="Min Stock" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                       {product.minimumStock} {product.unit}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-right">
                       {product.currentStock <= product.minimumStock ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Low Stock</span>
                       ) : (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">OK</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
                         onClick={() => openAdjustmentModal(product)} 
                         className="text-blue-600 hover:text-blue-900 flex items-center justify-end w-full"
@@ -157,7 +157,7 @@ const StockPage = () => {
 
       {activeTab === 'movements' && (
         <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 responsive-table">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -170,13 +170,13 @@ const StockPage = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {movements.map((mov) => (
                 <tr key={mov._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td data-label="Date" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {format(new Date(mov.date), 'dd MMM yyyy, HH:mm')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td data-label="Product" className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {mov.productId?.name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td data-label="Type" className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                       ${mov.type === 'SALE' || mov.type === 'DAMAGE' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}
                       ${mov.type === 'ADJUSTMENT' ? 'bg-blue-100 text-blue-800' : ''}
@@ -184,10 +184,10 @@ const StockPage = () => {
                       {mov.type}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${mov.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <td data-label="Qty Change" className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${mov.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {mov.quantity > 0 ? '+' : ''}{mov.quantity} {mov.productId?.unit}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td data-label="Reason/Ref" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {mov.reason || '-'}
                   </td>
                 </tr>

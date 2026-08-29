@@ -148,48 +148,48 @@ const Invoice = () => {
 
       {/* Printable Area Wrapper for Mobile scroll */}
       <div className="overflow-x-auto w-full pb-4">
-        <div id="printable-invoice" className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0 min-w-[700px] md:min-w-full">
+        <div id="printable-invoice" className="bg-white p-2 sm:p-6 rounded-lg shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0 w-full min-w-0">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start border-b-2 border-yellow-500 pb-3 mb-4">
+        <div className="flex flex-row justify-between items-start border-b-2 border-yellow-500 pb-3 mb-4">
           {/* Text on Left */}
-          <div className="flex flex-col justify-center text-center sm:text-left w-full sm:w-auto order-2 sm:order-1 mt-4 sm:mt-0">
-            <h2 className="text-xl font-black text-gray-900 tracking-wide">HAMDAN TRADERS</h2>
-            <p className="text-sm font-bold text-gray-700 uppercase tracking-wider">Frozen Items Supplier</p>
-            <p className="text-xs italic font-medium text-yellow-600 mb-1">Behtareen Taste, Hamesha Aapke Sath!</p>
+          <div className="flex flex-col justify-center text-left w-auto mt-0">
+            <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-wide">HAMDAN TRADERS</h2>
+            <p className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Frozen Items Supplier</p>
+            <p className="text-[10px] sm:text-xs italic font-medium text-yellow-600 mb-1">Behtareen Taste, Hamesha Aapke Sath!</p>
             
-            <p className="text-sm font-bold text-gray-800 mt-1">📞 0319-2828305 | 0300-2970372</p>
-            <p className="text-sm font-bold text-red-600">Only Delivery Available</p>
+            <p className="text-xs sm:text-sm font-bold text-gray-800 mt-1">📞 0319-2828305 | 0300-2970372</p>
+            <p className="text-xs sm:text-sm font-bold text-red-600">Only Delivery Available</p>
           </div>
           
           {/* Logo on Right */}
-          <div className="flex justify-center sm:justify-end w-full sm:w-auto order-1 sm:order-2">
-            <img src="/logo.png" alt="Hamdan Traders" className="h-24 object-contain" />
+          <div className="flex justify-end w-auto">
+            <img src="/logo.png" alt="Hamdan Traders" className="h-16 sm:h-24 object-contain" />
           </div>
         </div>
 
         {/* Info Section */}
-        <div className="flex flex-col sm:flex-row justify-between mb-4 gap-4">
+        <div className="flex flex-row justify-between mb-4 gap-2">
           <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">
               {isSale ? 'Billed To' : 'Supplier'}
             </h3>
-            <p className="text-lg font-bold text-gray-900">{partyName || 'Cash / Walk-in'}</p>
-            {partyPhone && <p className="text-sm text-gray-600 mt-1">Phone: {partyPhone}</p>}
-            {partyAddress && <p className="text-sm text-gray-600 whitespace-pre-wrap">{partyAddress}</p>}
+            <p className="text-sm sm:text-lg font-bold text-gray-900">{partyName || 'Cash / Walk-in'}</p>
+            {partyPhone && <p className="text-xs sm:text-sm text-gray-600 mt-1">Phone: {partyPhone}</p>}
+            {partyAddress && <p className="text-xs sm:text-sm text-gray-600 whitespace-pre-wrap">{partyAddress}</p>}
           </div>
-          <div className="text-left sm:text-right">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Details</h3>
-            <p className="text-sm text-gray-900 mb-1">
-              <span className="font-semibold text-gray-600 mr-2">Invoice #:</span> 
+          <div className="text-right">
+            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">Details</h3>
+            <p className="text-xs sm:text-sm text-gray-900 mb-1">
+              <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Invoice #:</span> 
               {invoiceNumber}
             </p>
-            <p className="text-sm text-gray-900 mb-1">
-              <span className="font-semibold text-gray-600 mr-2">Date:</span> 
-              {format(new Date(data.date), 'dd MMMM, yyyy')}
+            <p className="text-xs sm:text-sm text-gray-900 mb-1">
+              <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Date:</span> 
+              {format(new Date(data.date), 'dd MMM, yyyy')}
             </p>
-            <p className="text-sm text-gray-900 mb-1">
-              <span className="font-semibold text-gray-600 mr-2">Status:</span> 
+            <p className="text-xs sm:text-sm text-gray-900 mb-1">
+              <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Status:</span> 
               <span className={`font-bold ${data.status === 'PAID' ? 'text-green-600' : data.status === 'PARTIAL' ? 'text-yellow-600' : 'text-red-600'}`}>
                 {data.status}
               </span>
@@ -202,26 +202,26 @@ const Invoice = () => {
           <table className="w-full text-left border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-400">
-                <th className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-700 uppercase tracking-wider text-center w-12">#</th>
-                <th className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-700 uppercase tracking-wider">Item Description</th>
-                <th className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-700 uppercase tracking-wider text-center">Qty</th>
-                <th className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Price</th>
-                <th className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Total</th>
+                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center w-8 sm:w-12">#</th>
+                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Item</th>
+                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center">Qty</th>
+                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Price</th>
+                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Total</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((item, index) => (
                 <tr key={index} className="border-b border-gray-300">
-                  <td className="py-2 px-3 border border-gray-300 text-sm text-gray-800 text-center">{index + 1}</td>
-                  <td className="py-2 px-3 border border-gray-300">
-                    <p className="text-sm font-bold text-gray-900">{item.productId?.name || 'Unknown Product'}</p>
+                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-center">{index + 1}</td>
+                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300">
+                    <p className="text-xs sm:text-sm font-bold text-gray-900">{item.productId?.name || 'Unknown Product'}</p>
                   </td>
-                  <td className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-900 text-center">{item.quantity}</td>
-                  <td className="py-2 px-3 border border-gray-300 text-sm text-gray-800 text-right">
-                    Rs. {(isSale ? item.price : item.cost)?.toLocaleString()}
+                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-center">{item.quantity}</td>
+                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-right">
+                    {(isSale ? item.price : item.cost)?.toLocaleString()}
                   </td>
-                  <td className="py-2 px-3 border border-gray-300 text-sm font-bold text-gray-900 text-right">
-                    Rs. {(((isSale ? item.price : item.cost) || 0) * item.quantity).toLocaleString()}
+                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-right">
+                    {(((isSale ? item.price : item.cost) || 0) * item.quantity).toLocaleString()}
                   </td>
                 </tr>
               ))}
@@ -231,28 +231,28 @@ const Invoice = () => {
 
         {/* Totals */}
         <div className="flex justify-end">
-          <div className="w-full sm:w-72">
-            <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-sm font-medium text-gray-600">Subtotal:</span>
-              <span className="text-sm font-bold text-gray-900">Rs. {data.subtotal?.toLocaleString()}</span>
+          <div className="w-[65%] sm:w-72">
+            <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
+              <span className="text-xs sm:text-sm font-medium text-gray-600">Subtotal:</span>
+              <span className="text-xs sm:text-sm font-bold text-gray-900">Rs. {data.subtotal?.toLocaleString()}</span>
             </div>
             {data.discount > 0 && (
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-sm font-medium text-gray-600">Discount:</span>
-                <span className="text-sm font-bold text-red-600">- Rs. {data.discount?.toLocaleString()}</span>
+              <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Discount:</span>
+                <span className="text-xs sm:text-sm font-bold text-red-600">- Rs. {data.discount?.toLocaleString()}</span>
               </div>
             )}
-            <div className="flex justify-between py-2 border-b-2 border-gray-800">
-              <span className="text-lg font-bold text-gray-900">Grand Total:</span>
-              <span className="text-lg font-bold text-gray-900">Rs. {data.grandTotal?.toLocaleString()}</span>
+            <div className="flex justify-between py-1 sm:py-2 border-b-2 border-gray-800">
+              <span className="text-sm sm:text-lg font-bold text-gray-900">Grand Total:</span>
+              <span className="text-sm sm:text-lg font-bold text-gray-900">Rs. {data.grandTotal?.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-gray-200 mt-2">
-              <span className="text-sm font-medium text-gray-600">Amount Paid:</span>
-              <span className="text-sm font-bold text-green-600">Rs. {data.paid?.toLocaleString()}</span>
+            <div className="flex justify-between py-1 border-b border-gray-200 mt-1 sm:mt-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-600">Amount Paid:</span>
+              <span className="text-xs sm:text-sm font-bold text-green-600">Rs. {data.paid?.toLocaleString()}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-sm font-bold text-gray-900">Remaining Balance:</span>
-              <span className={`text-sm font-bold ${data.remaining > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+              <span className="text-xs sm:text-sm font-bold text-gray-900">Balance:</span>
+              <span className={`text-xs sm:text-sm font-bold ${data.remaining > 0 ? 'text-red-600' : 'text-gray-900'}`}>
                 Rs. {data.remaining?.toLocaleString()}
               </span>
             </div>

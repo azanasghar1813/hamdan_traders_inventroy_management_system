@@ -68,7 +68,7 @@ const SalesPage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 responsive-table">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
@@ -100,25 +100,25 @@ const SalesPage = () => {
             ) : (
               sales.map((sale) => (
               <tr key={sale._id} className={`hover:bg-gray-50 ${sale.isCancelled ? 'bg-red-50 opacity-75' : ''}`}>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${sale.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
+                <td data-label="Invoice #" className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${sale.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
                   {sale.invoiceNumber}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-500'}`}>
+                <td data-label="Date" className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-500'}`}>
                   {format(new Date(sale.date), 'dd MMM yyyy, hh:mm a')}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-900'}`}>
+                <td data-label="Customer" className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-900'}`}>
                   {sale.customerId?.name}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${sale.isCancelled ? 'text-red-600 line-through' : ''}`}>
+                <td data-label="Total" className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${sale.isCancelled ? 'text-red-600 line-through' : ''}`}>
                   Rs. {sale.grandTotal.toLocaleString()}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-red-600 line-through' : 'text-green-600'}`}>
+                <td data-label="Paid" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-red-600 line-through' : 'text-green-600'}`}>
                   Rs. {sale.paid.toLocaleString()}
                 </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-red-600 line-through' : 'text-red-600'}`}>
+                <td data-label="Remaining" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-red-600 line-through' : 'text-red-600'}`}>
                   Rs. {sale.remaining.toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
                   {sale.isCancelled ? (
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                       CANCELLED
@@ -131,7 +131,7 @@ const SalesPage = () => {
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <Link to={`/invoice/sale/${sale._id}`} className="text-gray-600 hover:text-blue-900 inline-block mr-4" title="View Invoice">
                     <FiEye size={18} />
                   </Link>
