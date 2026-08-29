@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const mongoSanitize = require('express-mongo-sanitize');
 const path = require('path');
 
 const app = express();
@@ -14,13 +13,11 @@ app.use(cors());
 
 // Security Middlewares
 app.use(helmet());
-app.use(mongoSanitize());
 
 app.use(morgan('dev'));
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const stockRoutes = require('./routes/stockRoutes');
 const customerRoutes = require('./routes/customerRoutes');
@@ -30,10 +27,10 @@ const saleRoutes = require('./routes/saleRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/customers', customerRoutes);
@@ -43,6 +40,7 @@ app.use('/api/sales', saleRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/users', userRoutes);
 
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production') {

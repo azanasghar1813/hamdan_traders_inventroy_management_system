@@ -18,7 +18,8 @@ const saleSchema = new mongoose.Schema(
     paid: { type: Number, required: true },
     remaining: { type: Number, required: true },
     date: { type: Date, default: Date.now, index: true },
-    status: { type: String, enum: ['PAID', 'PARTIAL', 'UNPAID'], default: 'UNPAID' }
+    status: { type: String, enum: ['PAID', 'PARTIAL', 'UNPAID'], default: 'UNPAID' },
+    isCancelled: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

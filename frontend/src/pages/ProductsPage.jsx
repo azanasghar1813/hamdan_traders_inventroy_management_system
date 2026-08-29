@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FiPlus, FiEdit, FiSearch } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiSearch, FiTrash2 } from 'react-icons/fi';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   
@@ -13,9 +13,7 @@ const ProductsPage = () => {
   
   const [formData, setFormData] = useState({
     name: '',
-    categoryId: '',
-    brand: '',
-    sku: '',
+
     unit: 'Box',
     purchasePrice: '',
     salePrice: '',
@@ -26,7 +24,6 @@ const ProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
   }, []);
 
   const fetchProducts = async (keyword = '') => {
@@ -40,14 +37,7 @@ const ProductsPage = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const { data } = await api.get('/categories');
-      setCategories(data.data.filter(c => c.isActive));
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -59,10 +49,7 @@ const ProductsPage = () => {
       setEditingProduct(product);
       setFormData({
         name: product.name,
-        categoryId: product.categoryId?._id || product.categoryId,
-        brand: product.brand || '',
-        sku: product.sku,
-        unit: product.unit,
+
         purchasePrice: product.purchasePrice,
         salePrice: product.salePrice,
         minimumStock: product.minimumStock,
@@ -72,7 +59,7 @@ const ProductsPage = () => {
     } else {
       setEditingProduct(null);
       setFormData({
-        name: '', categoryId: categories[0]?._id || '', brand: '', sku: '',
+        name: '',
         unit: 'Box', purchasePrice: '', salePrice: '', minimumStock: '',
         expiryDate: '', isActive: true
       });
@@ -104,14 +91,23 @@ const ProductsPage = () => {
     }
   };
 
-  if (loading) return <div className="text-center py-10">Loading products...</div>;
+  const handleDelete = async (product) => {
+    if (window.confirm(`Are you sure you want to delete ${product.name}? This will hide it from the inventory, but keep it in past invoices.`)) {
+      try {
+        await api.delete(`/products/${product._id}`);
+        fetchProducts(search);
+      } catch (err) {
+        alert(err.response?.data?.message || 'Error deleting product');
+      }
+    }
+  };
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Products</h1>
         
-        <div className="flex w-full md:w-auto gap-4">
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4">
           <form onSubmit={handleSearch} className="flex-1 md:w-64 relative">
             <input
               type="text"
@@ -125,7 +121,7 @@ const ProductsPage = () => {
           
           <button
             onClick={() => openModal()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center whitespace-nowrap shadow-sm"
+            className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm"
           >
             <FiPlus className="mr-2" /> Add Product
           </button>
@@ -137,31 +133,56 @@ const ProductsPage = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price (Pur/Sale)</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Purchase Price</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Min Stock</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {products.map((product) => (
-              <tr key={product._id} className="hover:bg-gray-50">
+            {loading ? (
+              <tr>
+                <td colSpan="8" className="px-6 py-10 text-center text-gray-500">
+                  <div className="animate-pulse flex flex-col items-center">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                    <div className="text-sm">Loading products...</div>
+                  </div>
+                </td>
+              </tr>
+            ) : products.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="px-6 py-10 text-center text-gray-500 text-sm">
+                  No products found.
+                </td>
+              </tr>
+            ) : (
+              products.map((product) => (
+                <tr key={product._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                  <div className="text-sm text-gray-500">{product.brand}</div>
+                  <div className="text-xs text-gray-500">Unit: {product.unit}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.sku}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.categoryId?.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                  <div className="text-gray-500">{product.purchasePrice}</div>
-                  <div className="font-medium text-gray-900">{product.salePrice}</div>
+
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                  {product.purchasePrice}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                  {product.salePrice}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                   <span className={`font-bold ${product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}`}>
-                    {product.currentStock} {product.unit}
+                    {product.currentStock}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                  {product.minimumStock}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {product.expiryDate ? new Date(product.expiryDate).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -172,12 +193,15 @@ const ProductsPage = () => {
                   <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 mr-3">
                     Edit
                   </button>
-                  <button onClick={() => toggleStatus(product)} className={`${product.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}>
+                  <button onClick={() => toggleStatus(product)} className={`${product.isActive ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'} mr-3`}>
                     {product.isActive ? 'Disable' : 'Enable'}
+                  </button>
+                  <button onClick={() => handleDelete(product)} className="text-red-600 hover:text-red-900">
+                    <FiTrash2 className="inline" /> Delete
                   </button>
                 </td>
               </tr>
-            ))}
+            )))}
           </tbody>
         </table>
       </div>
@@ -198,21 +222,8 @@ const ProductsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
                   <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                  <select required value={formData.categoryId} onChange={e => setFormData({...formData, categoryId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                    <option value="">Select Category</option>
-                    {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                  <input type="text" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
-                  <input type="text" required value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
-                </div>
+
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
                   <input type="text" required value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g. Box, Kg, Pack" />

@@ -39,7 +39,7 @@ const AlertsPage = () => {
             <h2 className="text-lg font-bold text-red-800">Low Stock Alerts ({lowStock.length})</h2>
           </div>
           
-          <div className="p-0 overflow-y-auto max-h-96">
+          <div className="p-0 overflow-y-auto overflow-x-auto max-h-96">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -53,7 +53,7 @@ const AlertsPage = () => {
                   <tr key={item._id} className="hover:bg-red-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                      <div className="text-xs text-gray-500">{item.sku}</div>
+
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600 text-right">
                       {item.currentStock} {item.unit}
@@ -82,7 +82,7 @@ const AlertsPage = () => {
             <h2 className="text-lg font-bold text-yellow-800">Approaching Expiry ({expiring.length})</h2>
           </div>
           
-          <div className="p-0 overflow-y-auto max-h-96">
+          <div className="p-0 overflow-y-auto overflow-x-auto max-h-96">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

@@ -64,7 +64,7 @@ const NewPurchasePage = () => {
     }
 
     try {
-      await api.post('/purchases', {
+      const response = await api.post('/purchases', {
         supplierId,
         items,
         subtotal,
@@ -73,7 +73,7 @@ const NewPurchasePage = () => {
         paid,
         remaining
       });
-      navigate('/purchases');
+      navigate(`/invoice/purchase/${response.data.data._id}`);
     } catch (err) {
       alert(err.response?.data?.message || 'Error creating purchase');
     }
@@ -100,7 +100,7 @@ const NewPurchasePage = () => {
         <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-900 mb-3 border-b pb-2">Purchase Items</h3>
           {items.map((item, index) => (
-            <div key={index} className="flex flex-col md:flex-row gap-4 items-end mb-4 bg-gray-50 p-4 rounded-md">
+            <div key={index} className="flex flex-col md:flex-row gap-4 items-start md:items-end mb-4 bg-gray-50 p-4 rounded-md">
               <div className="flex-1 w-full">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Product *</label>
                 <select 
@@ -110,7 +110,7 @@ const NewPurchasePage = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
                   <option value="">Select Product</option>
-                  {products.map(p => <option key={p._id} value={p._id}>{p.name} ({p.sku})</option>)}
+                  {products.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="w-full md:w-24">

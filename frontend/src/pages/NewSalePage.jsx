@@ -65,7 +65,7 @@ const NewSalePage = () => {
     }
 
     try {
-      await api.post('/sales', {
+      const response = await api.post('/sales', {
         customerId,
         items,
         subtotal,
@@ -74,7 +74,7 @@ const NewSalePage = () => {
         paid,
         remaining
       });
-      navigate('/sales');
+      navigate(`/invoice/sale/${response.data.data._id}`);
     } catch (err) {
       alert(err.response?.data?.message || 'Error creating sale');
     }
@@ -106,7 +106,7 @@ const NewSalePage = () => {
             const stockError = item.productId && item.quantity > stockAvailable;
 
             return (
-              <div key={index} className={`flex flex-col md:flex-row gap-4 items-end mb-4 p-4 rounded-md border ${stockError ? 'border-red-400 bg-red-50' : 'border-transparent bg-gray-50'}`}>
+              <div key={index} className={`flex flex-col md:flex-row gap-4 items-start md:items-end mb-4 p-4 rounded-md border ${stockError ? 'border-red-400 bg-red-50' : 'border-transparent bg-gray-50'}`}>
                 <div className="flex-1 w-full">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Product *</label>
                   <select 

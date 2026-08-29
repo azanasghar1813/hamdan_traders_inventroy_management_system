@@ -11,7 +11,7 @@ const getStockMovements = async (req, res) => {
     const filter = productId ? { productId } : {};
 
     const movements = await StockMovement.find(filter)
-      .populate('productId', 'name sku unit')
+      .populate('productId', 'name unit')
       .sort({ date: -1, createdAt: -1 });
 
     res.json({ success: true, data: movements });

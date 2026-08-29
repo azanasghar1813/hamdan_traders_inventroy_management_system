@@ -14,10 +14,7 @@ const getProducts = async (req, res) => {
         }
       : {};
 
-    const category = req.query.category ? { categoryId: req.query.category } : {};
-
-    const products = await Product.find({ ...keyword, ...category })
-      .populate('categoryId', 'name')
+    const products = await Product.find({ ...keyword, isDeleted: { $ne: true } })
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: products });
@@ -31,7 +28,7 @@ const getProducts = async (req, res) => {
 // @access  Private
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('categoryId', 'name');
+    const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
@@ -46,18 +43,12 @@ const getProductById = async (req, res) => {
 // @access  Private
 const createProduct = async (req, res) => {
   try {
-    const { name, categoryId, brand, sku, unit, purchasePrice, salePrice, minimumStock, expiryDate } = req.body;
+    const { name, unit, purchasePrice, salePrice, minimumStock, expiryDate } = req.body;
 
-    const productExists = await Product.findOne({ sku });
-    if (productExists) {
-      return res.status(400).json({ success: false, message: 'Product with this SKU already exists' });
-    }
+
 
     const product = await Product.create({
       name,
-      categoryId,
-      brand,
-      sku,
       unit,
       purchasePrice,
       salePrice,
@@ -82,7 +73,7 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const fieldsToUpdate = ['name', 'categoryId', 'brand', 'sku', 'unit', 'purchasePrice', 'salePrice', 'minimumStock', 'expiryDate', 'isActive'];
+    const fieldsToUpdate = ['name', 'unit', 'purchasePrice', 'salePrice', 'minimumStock', 'expiryDate', 'isActive'];
     
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -97,9 +88,29 @@ const updateProduct = async (req, res) => {
   }
 };
 
+// @desc    Delete a product (Soft delete)
+// @route   DELETE /api/products/:id
+// @access  Private
+const deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    
+    product.isDeleted = true;
+    await product.save();
+
+    res.json({ success: true, message: 'Product deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getProducts,
   getProductById,
   createProduct,
-  updateProduct
+  updateProduct,
+  deleteProduct
 };

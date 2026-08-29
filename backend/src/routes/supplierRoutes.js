@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getSuppliers, createSupplier, updateSupplier } = require('../controllers/supplierController');
+const { getSuppliers, createSupplier, updateSupplier, deleteSupplier } = require('../controllers/supplierController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -8,6 +8,7 @@ router.route('/')
   .post(protect, createSupplier);
 
 router.route('/:id')
-  .put(protect, updateSupplier);
+  .put(protect, updateSupplier)
+  .delete(protect, deleteSupplier);
 
 module.exports = router;

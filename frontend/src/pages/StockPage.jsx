@@ -64,25 +64,25 @@ const StockPage = () => {
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.sku.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return <div className="text-center py-10">Loading stock data...</div>;
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Stock Management</h1>
         
-        <div className="flex bg-gray-200 rounded-lg p-1">
+        <div className="flex flex-wrap bg-gray-200 rounded-lg p-1 w-full sm:w-auto">
           <button 
-            className={`px-4 py-1 rounded-md text-sm font-medium ${activeTab === 'inventory' ? 'bg-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${activeTab === 'inventory' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
             onClick={() => setActiveTab('inventory')}
           >
             Current Inventory
           </button>
           <button 
-            className={`px-4 py-1 rounded-md text-sm font-medium ${activeTab === 'movements' ? 'bg-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${activeTab === 'movements' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
             onClick={() => setActiveTab('movements')}
           >
             Movement History
@@ -109,8 +109,7 @@ const StockPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product / SKU</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Min Stock</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -122,11 +121,9 @@ const StockPage = () => {
                   <tr key={product._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                      <div className="text-xs text-gray-500">{product.sku}</div>
+
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.categoryId?.name}
-                    </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right">
                       <span className={product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}>
                         {product.currentStock} {product.unit}
@@ -177,7 +174,7 @@ const StockPage = () => {
                     {format(new Date(mov.date), 'dd MMM yyyy, HH:mm')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {mov.productId?.name} <span className="text-gray-500 text-xs">({mov.productId?.sku})</span>
+                    {mov.productId?.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 

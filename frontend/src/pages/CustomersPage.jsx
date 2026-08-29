@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FiPlus, FiEdit, FiSearch, FiDollarSign } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiSearch, FiDollarSign, FiTrash2 } from 'react-icons/fi';
 
 const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -48,6 +48,15 @@ const CustomersPage = () => {
     setIsModalOpen(true);
   };
 
+  const handlePhoneChange = (e) => {
+    let val = e.target.value.replace(/\D/g, ''); // Keep only numbers
+    if (val.length > 11) val = val.slice(0, 11);
+    if (val.length > 4) {
+      val = val.slice(0, 4) + '-' + val.slice(4);
+    }
+    setFormData({ ...formData, phone: val });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -63,14 +72,23 @@ const CustomersPage = () => {
     }
   };
 
-  if (loading) return <div className="text-center py-10">Loading customers...</div>;
+  const handleDelete = async (customer) => {
+    if (window.confirm(`Are you sure you want to delete ${customer.name}? This will hide them, but keep them in past invoices.`)) {
+      try {
+        await api.delete(`/customers/${customer._id}`);
+        fetchCustomers(search);
+      } catch (err) {
+        alert(err.response?.data?.message || 'Error deleting customer');
+      }
+    }
+  };
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
         
-        <div className="flex w-full md:w-auto gap-4">
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4">
           <form onSubmit={handleSearch} className="flex-1 md:w-64 relative">
             <input
               type="text"
@@ -84,7 +102,7 @@ const CustomersPage = () => {
           
           <button
             onClick={() => openModal()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center whitespace-nowrap shadow-sm"
+            className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm"
           >
             <FiPlus className="mr-2" /> Add Customer
           </button>
@@ -103,8 +121,24 @@ const CustomersPage = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {customers.map((customer) => (
-              <tr key={customer._id} className="hover:bg-gray-50">
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
+                  <div className="animate-pulse flex flex-col items-center">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                    <div className="text-sm">Loading customers...</div>
+                  </div>
+                </td>
+              </tr>
+            ) : customers.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-6 py-10 text-center text-gray-500 text-sm">
+                  No customers found.
+                </td>
+              </tr>
+            ) : (
+              customers.map((customer) => (
+                <tr key={customer._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{customer.name}</div>
                   <div className="text-xs text-gray-500">{customer.address || '-'}</div>
@@ -124,9 +158,12 @@ const CustomersPage = () => {
                   <button onClick={() => openModal(customer)} className="text-blue-600 hover:text-blue-900 mr-3">
                     <FiEdit className="inline" /> Edit
                   </button>
+                  <button onClick={() => handleDelete(customer)} className="text-red-600 hover:text-red-900">
+                    <FiTrash2 className="inline" /> Delete
+                  </button>
                 </td>
               </tr>
-            ))}
+            )))}
           </tbody>
         </table>
       </div>
@@ -148,7 +185,7 @@ const CustomersPage = () => {
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                <input type="text" placeholder="03XX-XXXXXXX" value={formData.phone} onChange={handlePhoneChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>

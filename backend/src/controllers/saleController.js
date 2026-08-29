@@ -25,7 +25,7 @@ const getSaleById = async (req, res) => {
   try {
     const sale = await Sale.findById(req.params.id)
       .populate('customerId', 'name phone address')
-      .populate('items.productId', 'name sku unit');
+      .populate('items.productId', 'name unit');
       
     if (!sale) {
       return res.status(404).json({ success: false, message: 'Sale not found' });
@@ -62,7 +62,7 @@ const createSale = async (req, res) => {
 
     // Generate unique invoice number (e.g., INV-YYYYMMDD-XXXX)
     const count = await Sale.countDocuments();
-    const invoiceNumber = `INV-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${(count + 1).toString().padStart(4, '0')}`;
+    const invoiceNumber = `INV-${(count + 1).toString().padStart(4, '0')}`;
 
     let status = 'UNPAID';
     if (paid >= grandTotal) status = 'PAID';
@@ -118,8 +118,136 @@ const createSale = async (req, res) => {
   }
 };
 
+// @desc    Toggle Sale Cancellation Status (Cancel/Restore)
+// @route   PUT /api/sales/:id/toggle-cancel
+// @access  Private
+const toggleSaleStatus = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const sale = await Sale.findById(req.params.id).session(session);
+    if (!sale) throw new Error('Sale not found');
+
+    const isCancelling = !sale.isCancelled;
+
+    // 1. Process each item
+    for (const item of sale.items) {
+      const product = await Product.findById(item.productId).session(session);
+      if (!product) continue;
+
+      if (isCancelling) {
+        // Revert stock (Increase stock because sale is cancelled)
+        product.currentStock += Number(item.quantity);
+        
+        await StockMovement.create([{
+          productId: item.productId,
+          type: 'SALE_CANCEL',
+          quantity: Math.abs(Number(item.quantity)),
+          reason: `Cancelled Sales Invoice: ${sale.invoiceNumber}`,
+          referenceId: sale._id,
+          date: new Date()
+        }], { session });
+
+      } else {
+        // Restore sale (Decrease stock again)
+        if (product.currentStock < item.quantity) {
+          throw new Error(`Cannot restore sale. Insufficient Stock for product. Available: ${product.currentStock}, Requested: ${item.quantity}`);
+        }
+        product.currentStock -= Number(item.quantity);
+
+        await StockMovement.create([{
+          productId: item.productId,
+          type: 'SALE_RESTORE',
+          quantity: -Math.abs(Number(item.quantity)),
+          reason: `Restored Sales Invoice: ${sale.invoiceNumber}`,
+          referenceId: sale._id,
+          date: new Date()
+        }], { session });
+      }
+      
+      await product.save({ session });
+    }
+
+    // 2. Update customer balance
+    const customer = await Customer.findById(sale.customerId).session(session);
+    if (customer) {
+      if (isCancelling) {
+        customer.currentBalance -= Number(sale.remaining);
+      } else {
+        customer.currentBalance += Number(sale.remaining);
+      }
+      await customer.save({ session });
+    }
+
+    // 3. Update sale status
+    sale.isCancelled = isCancelling;
+    await sale.save({ session });
+
+    await session.commitTransaction();
+    res.json({ success: true, data: sale, message: isCancelling ? 'Sale cancelled successfully' : 'Sale restored successfully' });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400).json({ success: false, message: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// @desc    Add Payment to a Sale
+// @route   POST /api/sales/:id/payment
+// @access  Private
+const addSalePayment = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { amount } = req.body;
+    const paymentAmount = Number(amount);
+
+    if (!paymentAmount || paymentAmount <= 0) {
+      throw new Error('Please provide a valid payment amount');
+    }
+
+    const sale = await Sale.findById(req.params.id).session(session);
+    if (!sale) throw new Error('Sale not found');
+    if (sale.isCancelled) throw new Error('Cannot add payment to a cancelled sale');
+    if (sale.remaining <= 0) throw new Error('This invoice is already fully paid');
+    if (paymentAmount > sale.remaining) throw new Error(`Payment amount (Rs. ${paymentAmount}) cannot exceed remaining balance (Rs. ${sale.remaining})`);
+
+    // 1. Update Sale amounts and status
+    sale.paid += paymentAmount;
+    sale.remaining -= paymentAmount;
+    
+    if (sale.remaining <= 0) {
+      sale.status = 'PAID';
+    } else {
+      sale.status = 'PARTIAL';
+    }
+    
+    await sale.save({ session });
+
+    // 2. Update Customer Balance
+    const customer = await Customer.findById(sale.customerId).session(session);
+    if (customer) {
+      customer.currentBalance -= paymentAmount;
+      await customer.save({ session });
+    }
+
+    await session.commitTransaction();
+    res.json({ success: true, data: sale, message: `Payment of Rs. ${paymentAmount} added successfully` });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400).json({ success: false, message: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
 module.exports = {
   getSales,
   getSaleById,
-  createSale
+  createSale,
+  toggleSaleStatus,
+  addSalePayment
 };

@@ -14,7 +14,7 @@ const getCustomers = async (req, res) => {
         }
       : {};
 
-    const customers = await Customer.find({ ...keyword }).sort({ createdAt: -1 });
+    const customers = await Customer.find({ ...keyword, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
     res.json({ success: true, data: customers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -67,8 +67,28 @@ const updateCustomer = async (req, res) => {
   }
 };
 
+// @desc    Delete a customer (Soft delete)
+// @route   DELETE /api/customers/:id
+// @access  Private
+const deleteCustomer = async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+    
+    customer.isDeleted = true;
+    await customer.save();
+
+    res.json({ success: true, message: 'Customer deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getCustomers,
   createCustomer,
-  updateCustomer
+  updateCustomer,
+  deleteCustomer
 };

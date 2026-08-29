@@ -8,27 +8,51 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const checkUserLoggedIn = async () => {
+      const storedUserInfo = localStorage.getItem('userInfo');
+      if (storedUserInfo) {
+        const userInfo = JSON.parse(storedUserInfo);
+        api.defaults.headers.common['Authorization'] = `Bearer ${userInfo.token}`;
+        
+        try {
+          const { data } = await api.get('/auth/me');
+          setUser({ ...data.data, token: userInfo.token });
+        } catch (error) {
+          console.error("Token invalid or expired");
+          logout();
+        }
+      }
+      setLoading(false);
+    };
+
+    checkUserLoggedIn();
   }, []);
 
   const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    if (response.data.success) {
-      const userData = response.data.data;
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
+    try {
+      const { data } = await api.post('/auth/login', { email, password });
+      
+      const userInfo = {
+        _id: data.data._id,
+        name: data.data.name,
+        email: data.data.email,
+        role: data.data.role,
+        token: data.data.token
+      };
+
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.data.token}`;
+      setUser(userInfo);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Login failed' };
     }
-    throw new Error('Login failed');
   };
 
   const logout = () => {
+    localStorage.removeItem('userInfo');
+    delete api.defaults.headers.common['Authorization'];
     setUser(null);
-    localStorage.removeItem('user');
   };
 
   return (

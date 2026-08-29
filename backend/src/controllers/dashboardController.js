@@ -49,34 +49,16 @@ const getDashboardStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // 7. Last 7 Days Sales Trend (for Chart)
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 6);
+    // 7. Low Stock Products
+    const lowStockProducts = await Product.find({
+      $expr: { $lte: ['$currentStock', '$minimumStock'] },
+      isActive: true
+    }).limit(10);
 
-    const salesTrend = await Sale.aggregate([
-      { $match: { date: { $gte: sevenDaysAgo } } },
-      { 
-        $group: { 
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
-          total: { $sum: "$grandTotal" } 
-        } 
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    // Format chart data to include empty days
-    const chartData = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(sevenDaysAgo);
-      d.setDate(sevenDaysAgo.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      
-      const found = salesTrend.find(s => s._id === dateStr);
-      chartData.push({
-        date: dateStr,
-        sales: found ? found.total : 0
-      });
-    }
+    // 8. All active products for stock cards
+    const allProductsStock = await Product.find({ isActive: true })
+      .select('name currentStock unit')
+      .sort({ name: 1 });
 
     res.json({
       success: true,
@@ -89,7 +71,8 @@ const getDashboardStats = async (req, res) => {
           monthlyPurchasesAmount
         },
         recentSales,
-        chartData
+        lowStockProducts,
+        allProductsStock
       }
     });
 

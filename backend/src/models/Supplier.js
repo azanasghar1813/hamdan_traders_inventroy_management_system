@@ -7,7 +7,8 @@ const supplierSchema = new mongoose.Schema(
     address: { type: String },
     openingBalance: { type: Number, default: 0 },
     currentBalance: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
