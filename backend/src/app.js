@@ -42,19 +42,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 
-// Serve Frontend in Production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
-
-  app.get(/(.*)/, (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../../frontend', 'dist', 'index.html'));
-  });
-} else {
-  // Basic health check route
-  app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'API is running' });
-  });
-}
+// Basic health check routes for Uptime Robot
+app.get('/', (req, res) => res.send('API is running'));
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok', message: 'API is running' }));
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
