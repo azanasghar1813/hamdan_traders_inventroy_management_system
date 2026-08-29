@@ -7,6 +7,7 @@ import api from '../services/api';
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -16,16 +17,17 @@ const Dashboard = () => {
     try {
       const { data } = await api.get('/dashboard');
       setStats(data.data);
+      setError(false);
     } catch (err) {
       console.error(err);
+      setError(true);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="text-center py-10">Loading dashboard...</div>;
-  if (!stats) return <div className="text-center py-10 text-red-500">Failed to load data.</div>;
-
+  if (error) return <div className="text-center py-10 text-red-500">Failed to load data.</div>;
+  if (!stats) return null;
   const { summary, recentSales, lowStockProducts, allProductsStock } = stats;
 
   return (
