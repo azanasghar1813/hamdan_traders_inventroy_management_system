@@ -4,7 +4,7 @@ import { FiPlus, FiEdit, FiSearch, FiDollarSign, FiTrash2 } from 'react-icons/fi
 
 const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);

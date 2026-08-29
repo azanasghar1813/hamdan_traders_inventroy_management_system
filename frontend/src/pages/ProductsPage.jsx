@@ -5,7 +5,7 @@ import { FiPlus, FiEdit, FiSearch, FiTrash2 } from 'react-icons/fi';
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);

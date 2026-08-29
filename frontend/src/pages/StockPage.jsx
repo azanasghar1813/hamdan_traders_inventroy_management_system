@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 const StockPage = () => {
   const [products, setProducts] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);

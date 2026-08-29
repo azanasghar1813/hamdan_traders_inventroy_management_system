@@ -4,7 +4,7 @@ import { FiPlus, FiEdit2, FiTrash2, FiUser, FiUserCheck, FiUserX, FiEye, FiEyeOf
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);

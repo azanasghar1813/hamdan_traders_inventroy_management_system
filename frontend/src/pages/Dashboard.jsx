@@ -6,7 +6,7 @@ import api from '../services/api';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();

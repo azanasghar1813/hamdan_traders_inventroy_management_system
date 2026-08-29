@@ -6,7 +6,7 @@ import { format, differenceInDays } from 'date-fns';
 const AlertsPage = () => {
   const [lowStock, setLowStock] = useState([]);
   const [expiring, setExpiring] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchAlerts();
