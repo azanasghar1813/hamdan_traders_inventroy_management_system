@@ -220,25 +220,25 @@ const ProductsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
-                  <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
 
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
-                  <input type="text" required value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g. Box, Kg, Pack" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <input type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g. Box, Kg, Pack" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Stock</label>
                   <input type="number" min="0" value={formData.minimumStock} onChange={e => setFormData({...formData, minimumStock: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Price *</label>
-                  <input type="number" min="0" step="0.01" required value={formData.purchasePrice} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Price</label>
+                  <input type="number" min="0" step="0.01" value={formData.purchasePrice} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price *</label>
-                  <input type="number" min="0" step="0.01" required value={formData.salePrice} onChange={e => setFormData({...formData, salePrice: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
+                  <input type="number" min="0" step="0.01" value={formData.salePrice} onChange={e => setFormData({...formData, salePrice: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>

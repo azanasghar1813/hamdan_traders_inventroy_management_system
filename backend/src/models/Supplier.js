@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const supplierSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, index: true },
+    name: { type: String, default: 'Unnamed Supplier', index: true },
     phone: { type: String, index: true },
     address: { type: String },
     openingBalance: { type: Number, default: 0 },

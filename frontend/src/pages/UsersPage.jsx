@@ -230,7 +230,7 @@ const UsersPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password {editingUser && <span className="text-xs text-gray-500 font-normal">(Leave blank to keep current)</span>}
+                  Password {editingUser && <span className="text-xs text-gray-500 font-normal">(Leave blank to keep unchanged)</span>}
                 </label>
                 <div className="relative rounded-md shadow-sm">
                   <input 
@@ -253,7 +253,7 @@ const UsersPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                 <select 
                   value={formData.role} 
                   onChange={e => setFormData({...formData, role: e.target.value})}

@@ -181,7 +181,7 @@ const CustomersPage = () => {
             <form onSubmit={handleSubmit} className="px-6 py-4">
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
-                <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>

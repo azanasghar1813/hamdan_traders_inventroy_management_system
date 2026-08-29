@@ -86,9 +86,8 @@ const NewSalePage = () => {
       
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Select Customer *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Select Customer</label>
           <select 
-            required 
             value={customerId} 
             onChange={(e) => setCustomerId(e.target.value)}
             className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md"
@@ -108,9 +107,8 @@ const NewSalePage = () => {
             return (
               <div key={index} className={`flex flex-col md:flex-row gap-4 items-start md:items-end mb-4 p-4 rounded-md border ${stockError ? 'border-red-400 bg-red-50' : 'border-transparent bg-gray-50'}`}>
                 <div className="flex-1 w-full">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Product *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Product</label>
                   <select 
-                    required 
                     value={item.productId} 
                     onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -120,9 +118,9 @@ const NewSalePage = () => {
                   </select>
                 </div>
                 <div className="w-full md:w-24">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Qty *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Qty</label>
                   <input 
-                    type="number" min="1" required 
+                    type="number" min="1" 
                     value={item.quantity} 
                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                     className={`w-full px-3 py-2 border rounded-md text-sm ${stockError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`} 
@@ -130,9 +128,9 @@ const NewSalePage = () => {
                   {stockError && <span className="text-red-500 text-[10px] absolute">Exceeds stock!</span>}
                 </div>
                 <div className="w-full md:w-32">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Sale Price (Rs) *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Sale Price (Rs)</label>
                   <input 
-                    type="number" min="0" step="0.01" required 
+                    type="number" min="0" step="0.01" 
                     value={item.price} 
                     onChange={(e) => handleItemChange(index, 'price', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
