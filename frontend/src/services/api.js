@@ -15,9 +15,9 @@ const api = setupCache(baseApi, {
 // Request interceptor to add the auth token to headers
 api.interceptors.request.use(
   (config) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.token) {
-      config.headers.Authorization = `Bearer ${user.token}`;
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (userInfo && userInfo.token) {
+      config.headers.Authorization = `Bearer ${userInfo.token}`;
     }
     return config;
   },
@@ -38,7 +38,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Clear user and optionally redirect to login
-      localStorage.removeItem('user');
+      localStorage.removeItem('userInfo');
       window.location.href = '/login';
     }
     return Promise.reject(error);
