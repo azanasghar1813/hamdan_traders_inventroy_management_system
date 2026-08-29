@@ -24,8 +24,8 @@ const NewSalePage = () => {
         api.get('/products')
       ]);
       setCustomers(custRes.data.data.filter(c => c.isActive));
-      // Only show products that have stock
-      setProducts(prodRes.data.data.filter(p => p.isActive && p.currentStock > 0));
+      // Show all active products (even if out of stock, so they appear in the list)
+      setProducts(prodRes.data.data.filter(p => p.isActive));
     } catch (err) {
       console.error(err);
     }

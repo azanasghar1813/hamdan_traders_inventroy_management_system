@@ -146,8 +146,9 @@ const Invoice = () => {
         </div>
       </div>
 
-      {/* Printable Area */}
-      <div id="printable-invoice" className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0">
+      {/* Printable Area Wrapper for Mobile scroll */}
+      <div className="overflow-x-auto w-full pb-4">
+        <div id="printable-invoice" className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0 min-w-[700px] md:min-w-full">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start border-b-2 border-yellow-500 pb-3 mb-4">
@@ -197,7 +198,7 @@ const Invoice = () => {
         </div>
 
         {/* Items Table */}
-        <div className="mb-4 overflow-x-auto">
+        <div className="mb-4">
           <table className="w-full text-left border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-400">
@@ -264,6 +265,7 @@ const Invoice = () => {
           <p className="text-xs text-gray-500">Thank you for your business. For queries, please contact the numbers above.</p>
         </div>
 
+      </div>
       </div>
     </div>
   );
