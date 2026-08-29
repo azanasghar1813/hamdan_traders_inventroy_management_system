@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 
 const PurchasesPage = () => {
   const [purchases, setPurchases] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Payment Modal State
   const [paymentModalData, setPaymentModalData] = useState(null);
