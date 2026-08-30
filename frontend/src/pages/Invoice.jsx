@@ -110,7 +110,7 @@ const Invoice = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto mb-10">
+    <div className="max-w-xl mx-auto mb-10 print:mb-0 print:max-w-none print:w-full">
       {/* Controls (Hidden during print) */}
       <div className="flex justify-between items-center mb-6 print:hidden">
         <button 
@@ -146,9 +146,9 @@ const Invoice = () => {
         </div>
       </div>
 
-      {/* Printable Area Wrapper for Mobile scroll */}
-      <div className="overflow-x-auto w-full pb-4">
-        <div id="printable-invoice" className="bg-white p-2 sm:p-6 rounded-lg shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0 w-full min-w-0">
+      {/* Printable Area Wrapper for Mobile scroll (Hidden during Print) */}
+      <div className="overflow-x-auto w-full pb-4 print:hidden">
+        <div id="printable-invoice" className="bg-white p-2 sm:p-6 rounded-lg shadow-sm border border-gray-200 w-full min-w-0">
         
         {/* Header */}
         <div className="flex flex-row justify-between items-start border-b-2 border-yellow-500 pb-3 mb-4">
@@ -264,9 +264,99 @@ const Invoice = () => {
           <p className="text-md font-bold text-gray-800 mb-1 italic">Behtareen Taste, Hamesha Aapke Sath!</p>
           <p className="text-xs text-gray-500">Thank you for your business. For queries, please contact the numbers above.</p>
         </div>
+      </div>
+      </div>
 
-      </div>
-      </div>
+      {/* Thermal Printer Receipt Engine (Visible only during print) */}
+      <div className="hidden print:block max-w-full mx-auto text-black bg-white" style={{ fontFamily: "'Courier New', Courier, monospace", width: '80mm' }}>
+          {/* Header */}
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold font-sans uppercase mb-1">Hamdan Traders</h2>
+            <p className="font-bold text-sm mb-1 uppercase">Frozen Items Supplier</p>
+            <p className="text-xs mb-1">0319-2828305 | 0300-2970372</p>
+            <p className="text-xs font-bold uppercase">Only Delivery Available</p>
+          </div>
+
+          <div className="border-t-2 border-b-2 border-black py-2 mb-4 text-sm">
+            <div className="flex justify-between mb-1">
+              <span>Invoice #:</span>
+              <span className="font-bold">{invoiceNumber}</span>
+            </div>
+            <div className="flex justify-between mb-1">
+              <span>Date:</span>
+              <span className="font-bold">{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
+            </div>
+            <div className="flex justify-between mb-1 mt-2 pt-2 border-t border-dashed border-gray-400">
+              <span>{isSale ? 'Customer:' : 'Supplier:'}</span>
+              <span className="font-bold text-right">{partyName || 'Cash / Walk-in'}</span>
+            </div>
+            {partyPhone && (
+              <div className="flex justify-between">
+                <span>Phone:</span>
+                <span className="font-bold">{partyPhone}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Items Table */}
+          <table className="w-full mb-4 text-sm text-left border-collapse">
+            <thead>
+              <tr className="border-b-2 border-black">
+                <th className="py-1">Item</th>
+                <th className="py-1 text-center w-12">Qty</th>
+                <th className="py-1 text-right w-20">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, index) => {
+                const price = isSale ? item.price : item.cost;
+                const total = (price || 0) * item.quantity;
+                return (
+                  <tr key={index} className="border-b border-gray-400 border-dashed">
+                    <td className="py-2 pr-1 align-top">
+                      <div className="font-bold">{item.productId?.name || 'Unknown Product'}</div>
+                      <div className="text-xs mt-1">@ {price?.toLocaleString()}</div>
+                    </td>
+                    <td className="py-2 align-top text-center font-bold">{item.quantity}</td>
+                    <td className="py-2 align-top text-right font-bold">{total.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {/* Totals */}
+          <div className="border-t-2 border-black pt-2 mb-4 text-sm">
+            <div className="flex justify-between mb-1">
+              <span>Subtotal:</span>
+              <span>Rs. {data.subtotal?.toLocaleString()}</span>
+            </div>
+            {data.discount > 0 && (
+              <div className="flex justify-between mb-1">
+                <span>Discount:</span>
+                <span>- Rs. {data.discount?.toLocaleString()}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-lg my-2 border-t-2 border-black pt-2 border-b-2 pb-2">
+              <span>TOTAL:</span>
+              <span>Rs. {data.grandTotal?.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between mb-1">
+              <span>Paid:</span>
+              <span>Rs. {data.paid?.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between font-bold border-t border-dashed border-gray-400 pt-1 mt-1">
+              <span>Balance:</span>
+              <span>Rs. {data.remaining?.toLocaleString()}</span>
+            </div>
+          </div>
+          {/* Footer */}
+          <div className="text-center mt-6 text-sm">
+            <p className="font-bold mb-1 italic">Behtareen Taste, Hamesha Aapke Sath!</p>
+            <p className="mb-2">Thank you for your business.</p>
+            <p className="text-[10px] mt-4">--- System Generated Receipt ---</p>
+          </div>
+        </div>
     </div>
   );
 };

@@ -6,11 +6,10 @@ const Product = require('../models/Product');
 const getAlerts = async (req, res) => {
   try {
     // 1. Find Low Stock Products
-    // Using aggregation or simple find. We need where currentStock <= minimumStock
     const lowStockProducts = await Product.find({
       $expr: { $lte: ['$currentStock', '$minimumStock'] },
       isActive: true
-    }).populate('categoryId', 'name');
+    });
 
     // 2. Find Expiring Products (within next 30 days) or already expired
     const thirtyDaysFromNow = new Date();
@@ -18,9 +17,9 @@ const getAlerts = async (req, res) => {
 
     const expiringProducts = await Product.find({
       expiryDate: { $lte: thirtyDaysFromNow },
-      currentStock: { $gt: 0 }, // Only care if we actually have stock
+      currentStock: { $gt: 0 },
       isActive: true
-    }).populate('categoryId', 'name').sort({ expiryDate: 1 });
+    }).sort({ expiryDate: 1 });
 
     res.json({
       success: true,
@@ -30,6 +29,7 @@ const getAlerts = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('getAlerts error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
