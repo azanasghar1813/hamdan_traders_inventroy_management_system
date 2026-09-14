@@ -18,6 +18,7 @@ import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { useContext } from 'react';
+import InstallPWA from './components/InstallPWA';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -30,6 +31,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <InstallPWA />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           
