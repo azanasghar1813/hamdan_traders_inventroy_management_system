@@ -59,8 +59,11 @@ const createPurchase = async (req, res) => {
     // Server-side Financial Calculations
     let calculatedSubtotal = 0;
     const validatedItems = items.map(item => {
-      const quantity = Number(item.quantity) || 0;
-      const cost = Number(item.cost) || 0;
+      const parsedQty = Number(item.quantity);
+      const quantity = Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty;
+      const rawCost = item.cost !== undefined ? item.cost : (item.price !== undefined ? item.price : item.unitCost);
+      const parsedCost = Number(rawCost);
+      const cost = Number.isNaN(parsedCost) ? 0 : Math.max(0, parsedCost);
       const total = quantity * cost;
       calculatedSubtotal += total;
 

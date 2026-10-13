@@ -59,15 +59,18 @@ const createSale = async (req, res) => {
     // Server-side Financial Calculations
     let calculatedSubtotal = 0;
     const validatedItems = items.map(item => {
-      const quantity = Number(item.quantity) || 0;
-      const unitPrice = Number(item.unitPrice) || 0;
-      const total = quantity * unitPrice;
+      const parsedQty = Number(item.quantity);
+      const quantity = Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty;
+      const rawPrice = item.price !== undefined ? item.price : item.unitPrice;
+      const parsedPrice = Number(rawPrice);
+      const price = Number.isNaN(parsedPrice) ? 0 : Math.max(0, parsedPrice);
+      const total = quantity * price;
       calculatedSubtotal += total;
 
       return {
         productId: item.productId,
         quantity,
-        unitPrice,
+        price,
         total
       };
     });

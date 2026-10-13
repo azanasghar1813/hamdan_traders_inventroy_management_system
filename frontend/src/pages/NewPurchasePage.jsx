@@ -43,10 +43,12 @@ const NewPurchasePage = () => {
       const product = products.find(p => p._id === value);
       newItems[index].productId = value;
       newItems[index].cost = product ? product.purchasePrice : 0;
-      newItems[index].total = newItems[index].quantity * newItems[index].cost;
+      newItems[index].total = (Number(newItems[index].quantity) || 0) * (Number(newItems[index].cost) || 0);
     } else {
-      newItems[index][field] = Number(value);
-      newItems[index].total = newItems[index].quantity * newItems[index].cost;
+      newItems[index][field] = value === '' ? '' : Number(value);
+      const qty = Number(newItems[index].quantity) || 0;
+      const cst = Number(newItems[index].cost) || 0;
+      newItems[index].total = qty * cst;
     }
     setItems(newItems);
   };
@@ -60,9 +62,9 @@ const NewPurchasePage = () => {
     setItems(newItems);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const grandTotal = subtotal - discount;
-  const remaining = grandTotal - paid;
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const grandTotal = Math.max(0, subtotal - (Number(discount) || 0));
+  const remaining = grandTotal - (Number(paid) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,7 +88,12 @@ const NewPurchasePage = () => {
 
       const response = await api.post('/purchases', {
         supplierId: finalSupplierId,
-        items,
+        items: items.map(i => ({
+          productId: i.productId,
+          quantity: Number(i.quantity) || 1,
+          cost: Number(i.cost) || 0,
+          total: (Number(i.quantity) || 1) * (Number(i.cost) || 0)
+        })),
         subtotal,
         discount,
         grandTotal,
