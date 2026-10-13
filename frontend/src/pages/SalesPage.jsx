@@ -34,11 +34,10 @@ const SalesPage = () => {
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState(urlCustomerId);
-  const [statusFilter, setStatusFilter] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Sorting States
+  // Sorting States (default newest first)
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
 
@@ -144,14 +143,13 @@ const SalesPage = () => {
   const clearAllFilters = () => {
     setSearchQuery('');
     setSelectedCustomerId('');
-    setStatusFilter('ALL');
     setStartDate('');
     setEndDate('');
     setSearchParams({});
   };
 
   const hasActiveFilters = Boolean(
-    searchQuery || selectedCustomerId || statusFilter !== 'ALL' || startDate || endDate
+    searchQuery || selectedCustomerId || startDate || endDate
   );
 
   // Filtered and Sorted Sales Memo
@@ -162,15 +160,6 @@ const SalesPage = () => {
         if (selectedCustomerId) {
           const custId = sale.customerId?._id || sale.customerId;
           if (custId !== selectedCustomerId) return false;
-        }
-
-        // Status filter
-        if (statusFilter !== 'ALL') {
-          if (statusFilter === 'CANCELLED') {
-            if (!sale.isCancelled) return false;
-          } else {
-            if (sale.isCancelled || sale.status !== statusFilter) return false;
-          }
         }
 
         // Search query (invoice # or customer name)
@@ -222,7 +211,7 @@ const SalesPage = () => {
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [sales, selectedCustomerId, statusFilter, searchQuery, startDate, endDate, sortField, sortOrder]);
+  }, [sales, selectedCustomerId, searchQuery, startDate, endDate, sortField, sortOrder]);
 
   // Summary Metrics for filtered sales
   const summary = useMemo(() => {
@@ -335,7 +324,7 @@ const SalesPage = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Search by Invoice # or Customer */}
           <div className="relative">
             <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
@@ -372,47 +361,6 @@ const SalesPage = () => {
                   {c.name}
                 </option>
               ))}
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="PAID">Paid</option>
-              <option value="PARTIAL">Partial</option>
-              <option value="UNPAID">Unpaid</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
-
-          {/* Quick Sort Dropdown */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Sort By</label>
-            <select
-              value={`${sortField}-${sortOrder}`}
-              onChange={(e) => {
-                const [f, o] = e.target.value.split('-');
-                setSortField(f);
-                setSortOrder(o);
-              }}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-            >
-              <option value="date-desc">Date (Newest First)</option>
-              <option value="date-asc">Date (Oldest First)</option>
-              <option value="total-desc">Total (High to Low)</option>
-              <option value="total-asc">Total (Low to High)</option>
-              <option value="remaining-desc">Remaining (High to Low)</option>
-              <option value="remaining-asc">Remaining (Low to High)</option>
-              <option value="customer-asc">Customer Name (A-Z)</option>
-              <option value="customer-desc">Customer Name (Z-A)</option>
-              <option value="invoiceNumber-asc">Invoice # (Ascending)</option>
-              <option value="invoiceNumber-desc">Invoice # (Descending)</option>
             </select>
           </div>
         </div>
@@ -515,9 +463,6 @@ const SalesPage = () => {
               >
                 Remaining{renderSortIndicator('remaining')}
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Status
-              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Actions
               </th>
@@ -526,7 +471,7 @@ const SalesPage = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="8" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-10 text-center text-gray-500">
                   <div className="animate-pulse flex flex-col items-center">
                     <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
                     <div className="text-sm">Loading sales...</div>
@@ -535,7 +480,7 @@ const SalesPage = () => {
               </tr>
             ) : filteredSales.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-6 py-10 text-center text-gray-500 text-sm">
+                <td colSpan="7" className="px-6 py-10 text-center text-gray-500 text-sm">
                   {hasActiveFilters ? (
                     <div>
                       <p className="font-medium text-gray-700">No sales match your active filters.</p>
@@ -578,19 +523,6 @@ const SalesPage = () => {
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-red-600 line-through' : 'text-red-600 font-medium'}`}>
                     Rs. {Number(sale.remaining).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    {sale.isCancelled ? (
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                        CANCELLED
-                      </span>
-                    ) : (
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${sale.status === 'PAID' ? 'bg-green-100 text-green-800' : 
-                          sale.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                        {sale.status}
-                      </span>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link to={`/invoice/sale/${sale._id}`} className="text-gray-600 hover:text-blue-900 inline-block mr-4" title="View Invoice">
@@ -645,13 +577,6 @@ const SalesPage = () => {
                   <p className={`font-bold text-sm whitespace-nowrap ${s.isCancelled ? 'line-through text-red-600' : 'text-gray-900'}`}>
                     Rs. {Number(s.grandTotal).toLocaleString()}
                   </p>
-                  {s.isCancelled ? (
-                    <span className="text-[11px] font-semibold text-red-600">Cancelled</span>
-                  ) : s.status === 'PAID' ? (
-                    <span className="text-[11px] font-semibold text-green-600">Paid</span>
-                  ) : (
-                    <span className="text-[11px] font-semibold text-amber-600">{s.status}</span>
-                  )}
                 </div>
                 <span className="text-gray-300 text-xl leading-none ml-1" aria-hidden="true">
                   ›
@@ -681,18 +606,6 @@ const SalesPage = () => {
                   <div className="text-right">
                     <div className={`font-bold text-base ${s.isCancelled ? 'line-through text-red-600' : 'text-gray-900'}`}>
                       Rs. {Number(s.grandTotal).toLocaleString()}
-                    </div>
-                    <div className="mt-1">
-                      {s.isCancelled ? (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-100 text-red-800">CANCELLED</span>
-                      ) : (
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                          s.status === 'PAID' ? 'bg-green-100 text-green-800' :
-                          s.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {s.status}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
