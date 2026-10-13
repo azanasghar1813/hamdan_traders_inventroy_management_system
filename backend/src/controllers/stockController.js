@@ -43,10 +43,7 @@ const adjustStock = async (req, res) => {
       throw new Error('Product not found');
     }
 
-    // Verify stock doesn't go below 0
-    if (product.currentStock + Number(quantity) < 0) {
-      throw new Error(`Insufficient stock. Available: ${product.currentStock}, Requested adjustment: ${quantity}`);
-    }
+    // Allow stock adjustment without blocking negative values
 
     // Create movement record
     await StockMovement.create([{

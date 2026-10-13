@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { FiTrash2 } from 'react-icons/fi';
+import SelectOrTypeInput from '../components/SelectOrTypeInput';
 
 const NewSalePage = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   
-  const [customerId, setCustomerId] = useState('');
+  const [customer, setCustomer] = useState({ id: '', name: '', isManual: false });
   const [items, setItems] = useState([{ productId: '', quantity: 1, price: 0, total: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
@@ -60,13 +61,26 @@ const NewSalePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!customerId || items.length === 0 || items.some(i => !i.productId)) {
-      return alert('Please select a customer and at least one valid product.');
+    if ((!customer.id && !customer.name) || items.length === 0 || items.some(i => !i.productId)) {
+      return alert('Please select or enter a customer and at least one valid product.');
     }
 
     try {
+      let finalCustomerId = customer.id;
+      // If entered manually or no id, find existing by name or create new customer
+      if (!finalCustomerId && customer.name) {
+        const trimmedName = customer.name.trim();
+        const existing = customers.find(c => c.name.toLowerCase() === trimmedName.toLowerCase());
+        if (existing) {
+          finalCustomerId = existing._id;
+        } else {
+          const createRes = await api.post('/customers', { name: trimmedName });
+          finalCustomerId = createRes.data.data._id;
+        }
+      }
+
       const response = await api.post('/sales', {
-        customerId,
+        customerId: finalCustomerId,
         items,
         subtotal,
         discount,
@@ -86,35 +100,36 @@ const NewSalePage = () => {
       
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Select Customer</label>
-          <select 
-            value={customerId} 
-            onChange={(e) => setCustomerId(e.target.value)}
-            className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="">-- Select Customer --</option>
-            {customers.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-          </select>
+          <SelectOrTypeInput
+            label="Select Customer"
+            entityName="Customer"
+            items={customers}
+            value={customer}
+            onChange={setCustomer}
+            required
+          />
         </div>
 
         <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-900 mb-3 border-b pb-2">Sale Items</h3>
           {items.map((item, index) => {
             const selectedProduct = products.find(p => p._id === item.productId);
-            const stockAvailable = selectedProduct ? selectedProduct.currentStock : 0;
-            const stockError = item.productId && item.quantity > stockAvailable;
 
             return (
-              <div key={index} className={`flex flex-col md:flex-row gap-4 items-start md:items-end mb-4 p-4 rounded-md border ${stockError ? 'border-red-400 bg-red-50' : 'border-transparent bg-gray-50'}`}>
+              <div key={index} className="flex flex-col md:flex-row gap-4 items-start md:items-end mb-4 p-4 rounded-md border border-transparent bg-gray-50">
                 <div className="flex-1 w-full">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Product</label>
                   <select 
                     value={item.productId} 
                     onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
                   >
                     <option value="">Select Product</option>
-                    {products.map(p => <option key={p._id} value={p._id}>{p.name} ({p.currentStock} in stock)</option>)}
+                    {products.map(p => (
+                      <option key={p._id} value={p._id}>
+                        {p.name} ({p.currentStock} in stock)
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="w-full md:w-24">
@@ -123,9 +138,8 @@ const NewSalePage = () => {
                     type="number" min="1" 
                     value={item.quantity} 
                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md text-sm ${stockError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`} 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white" 
                   />
-                  {stockError && <span className="text-red-500 text-[10px] absolute">Exceeds stock!</span>}
                 </div>
                 <div className="w-full md:w-32">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Sale Price (Rs)</label>

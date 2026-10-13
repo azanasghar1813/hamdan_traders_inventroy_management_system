@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiX } from 'react-icons/fi';
 
 const InstallPWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -7,6 +8,11 @@ const InstallPWA = () => {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    // If dismissed in this session, do not show
+    if (sessionStorage.getItem('pwa_dismissed')) {
+      return;
+    }
+
     // Check if the user is on iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
@@ -56,6 +62,11 @@ const InstallPWA = () => {
     setIsInstallable(false);
   };
 
+  const handleDismiss = () => {
+    setIsInstallable(false);
+    sessionStorage.setItem('pwa_dismissed', 'true');
+  };
+
   if (isStandalone) {
     return null; // Don't show anything if already installed
   }
@@ -63,7 +74,15 @@ const InstallPWA = () => {
   return (
     <>
       {isInstallable && (
-        <div className="fixed bottom-4 right-4 z-[9999] bg-white p-4 rounded-lg shadow-xl border border-gray-200 flex flex-col sm:flex-row items-center gap-4 animate-bounce">
+        <div className="fixed bottom-4 right-4 z-[9999] bg-white p-4 pr-9 rounded-lg shadow-xl border border-gray-200 flex flex-col sm:flex-row items-center gap-4 animate-bounce">
+          <button
+            onClick={handleDismiss}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+            title="Close"
+            aria-label="Close"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
           <div>
             <p className="font-semibold text-gray-800">Install Hamdan Traders</p>
             <p className="text-sm text-gray-600">Install our app for a better experience</p>
@@ -76,13 +95,13 @@ const InstallPWA = () => {
           </button>
         </div>
       )}
-      
+
       {isIOS && !isStandalone && (
         <div className="fixed bottom-0 left-0 w-full bg-indigo-50 p-4 border-t border-indigo-200 text-indigo-800 text-sm flex justify-between items-center z-[9999]">
           <span>
             To install this app on your iOS device, tap the <strong>Share</strong> button and then <strong>"Add to Home Screen"</strong>.
           </span>
-          <button 
+          <button
             className="ml-4 text-indigo-600 hover:text-indigo-800 font-bold p-2"
             onClick={() => setIsIOS(false)}
           >

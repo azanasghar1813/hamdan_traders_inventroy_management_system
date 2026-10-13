@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { FiTrash2 } from 'react-icons/fi';
+import SelectOrTypeInput from '../components/SelectOrTypeInput';
 
 const NewPurchasePage = () => {
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   
-  const [supplierId, setSupplierId] = useState('');
+  const [supplier, setSupplier] = useState({ id: '', name: '', isManual: false });
   const [items, setItems] = useState([{ productId: '', quantity: 1, cost: 0, total: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
@@ -59,13 +60,26 @@ const NewPurchasePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!supplierId || items.length === 0 || items.some(i => !i.productId)) {
-      return alert('Please select a supplier and at least one valid product.');
+    if ((!supplier.id && !supplier.name) || items.length === 0 || items.some(i => !i.productId)) {
+      return alert('Please select or enter a supplier and at least one valid product.');
     }
 
     try {
+      let finalSupplierId = supplier.id;
+      // If entered manually or no id, find existing by name or create new supplier
+      if (!finalSupplierId && supplier.name) {
+        const trimmedName = supplier.name.trim();
+        const existing = suppliers.find(s => s.name.toLowerCase() === trimmedName.toLowerCase());
+        if (existing) {
+          finalSupplierId = existing._id;
+        } else {
+          const createRes = await api.post('/suppliers', { name: trimmedName });
+          finalSupplierId = createRes.data.data._id;
+        }
+      }
+
       const response = await api.post('/purchases', {
-        supplierId,
+        supplierId: finalSupplierId,
         items,
         subtotal,
         discount,
@@ -85,15 +99,14 @@ const NewPurchasePage = () => {
       
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Select Supplier</label>
-          <select 
-            value={supplierId} 
-            onChange={(e) => setSupplierId(e.target.value)}
-            className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="">-- Select Supplier --</option>
-            {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-          </select>
+          <SelectOrTypeInput
+            label="Select Supplier"
+            entityName="Supplier"
+            items={suppliers}
+            value={supplier}
+            onChange={setSupplier}
+            required
+          />
         </div>
 
         <div className="mb-6">

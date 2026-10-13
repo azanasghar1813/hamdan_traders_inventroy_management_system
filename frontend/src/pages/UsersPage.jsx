@@ -18,6 +18,7 @@ const UsersPage = () => {
   });
   const [formError, setFormError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedUserDetails, setSelectedUserDetails] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -90,13 +91,13 @@ const UsersPage = () => {
   };
 
   const toggleStatus = async (user) => {
-    if (window.confirm(`Are you sure you want to ${user.isActive ? 'deactivate' : 'activate'} this user?`)) {
-      try {
-        await api.put(`/users/${user._id}`, { isActive: !user.isActive });
-        fetchUsers();
-      } catch (err) {
-        alert(err.response?.data?.message || 'Error updating user status');
-      }
+    const nextStatus = !user.isActive;
+    setUsers(prev => prev.map(u => u._id === user._id ? { ...u, isActive: nextStatus } : u));
+    try {
+      await api.put(`/users/${user._id}`, { isActive: nextStatus });
+    } catch (err) {
+      setUsers(prev => prev.map(u => u._id === user._id ? { ...u, isActive: !nextStatus } : u));
+      alert(err.response?.data?.message || 'Error updating user status');
     }
   };
 
@@ -143,13 +144,20 @@ const UsersPage = () => {
             ) : (
               users.map(user => (
                 <tr key={user._id} className="hover:bg-gray-50">
-                  <td data-label="Name" className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-end">
+                  <td data-label="Name" className="px-6 py-4 whitespace-nowrap text-left">
+                    <div className="flex items-center justify-start">
                       <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <FiUser className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                      <div className="ml-3 text-left">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserDetails(user)}
+                          className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block text-left"
+                          title="Click to view user details"
+                        >
+                          {user.name}
+                        </button>
                       </div>
                     </div>
                   </td>
@@ -159,19 +167,32 @@ const UsersPage = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td data-label="Status" className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                  <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                    <button
+                      type="button"
+                      onClick={() => toggleStatus(user)}
+                      className="inline-flex items-center gap-2 group cursor-pointer focus:outline-none"
+                      title={`Click to switch to ${user.isActive ? 'Inactive' : 'Active'}`}
+                    >
+                      <span
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                          user.isActive ? 'bg-green-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            user.isActive ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                        user.isActive ? 'bg-green-100 text-green-800 group-hover:bg-green-200' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                      }`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </button>
                   </td>
                   <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => toggleStatus(user)}
-                      className={`mr-4 ${user.isActive ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}
-                      title={user.isActive ? "Deactivate User" : "Activate User"}
-                    >
-                      {user.isActive ? <FiUserX size={18} /> : <FiUserCheck size={18} />}
-                    </button>
                     <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-900 mr-4" title="Edit User">
                       <FiEdit2 size={18} />
                     </button>
@@ -280,6 +301,85 @@ const UsersPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* User Details Modal */}
+      {selectedUserDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900">User Profile</h3>
+              <button 
+                onClick={() => setSelectedUserDetails(null)} 
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-16 w-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold">
+                  {selectedUserDetails.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-gray-900">{selectedUserDetails.name}</h4>
+                  <p className="text-sm text-gray-500">{selectedUserDetails.email}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                      selectedUserDetails.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedUserDetails.role}
+                    </span>
+                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                      selectedUserDetails.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {selectedUserDetails.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 bg-gray-50 p-4 rounded-lg text-sm border border-gray-100">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Account ID:</span>
+                  <span className="font-mono text-xs text-gray-700">{selectedUserDetails._id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">System Role:</span>
+                  <span className="font-medium text-gray-900">
+                    {selectedUserDetails.role === 'ADMIN' ? 'Full Administrator' : 'Staff Member'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Status:</span>
+                  <span className={`font-medium ${selectedUserDetails.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                    {selectedUserDetails.isActive ? 'Active Account' : 'Disabled Account'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const u = selectedUserDetails;
+                    setSelectedUserDetails(null);
+                    openModal(u);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                >
+                  Edit User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserDetails(null)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -87,10 +87,14 @@ const ProductsPage = () => {
   };
 
   const toggleStatus = async (product) => {
+    const nextStatus = !product.isActive;
+    // Optimistic UI update for instant response
+    setProducts(prev => prev.map(p => p._id === product._id ? { ...p, isActive: nextStatus } : p));
     try {
-      await api.put(`/products/${product._id}`, { isActive: !product.isActive });
-      fetchProducts(search);
+      await api.put(`/products/${product._id}`, { isActive: nextStatus });
     } catch (err) {
+      // Revert on error
+      setProducts(prev => prev.map(p => p._id === product._id ? { ...p, isActive: !nextStatus } : p));
       alert('Error updating status');
     }
   };
@@ -190,19 +194,36 @@ const ProductsPage = () => {
                   {product.expiryDate ? new Date(product.expiryDate).toLocaleDateString() : '-'}
                 </td>
                 <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {product.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleStatus(product)}
+                    className="inline-flex items-center gap-2 group cursor-pointer focus:outline-none"
+                    title={`Click to switch to ${product.isActive ? 'Inactive' : 'Active'}`}
+                  >
+                    <span
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                        product.isActive ? 'bg-green-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          product.isActive ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                      product.isActive ? 'bg-green-100 text-green-800 group-hover:bg-green-200' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                    }`}>
+                      {product.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </button>
                 </td>
                 <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 mr-3">
+                  <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 mr-4">
                     Edit
                   </button>
-                  <button onClick={() => toggleStatus(product)} className={`${product.isActive ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'} mr-3`}>
-                    {product.isActive ? 'Disable' : 'Enable'}
-                  </button>
                   <button onClick={() => handleDelete(product)} className="text-red-600 hover:text-red-900">
-                    <FiTrash2 className="inline" /> Delete
+                    <FiTrash2 className="inline mr-1" /> Delete
                   </button>
                 </td>
               </tr>

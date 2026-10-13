@@ -50,14 +50,10 @@ const createSale = async (req, res) => {
       throw new Error('No sale items provided');
     }
 
-    // 1. Check stock for all items BEFORE creating anything
+    // 1. Verify all products exist
     for (const item of items) {
       const product = await Product.findById(item.productId).session(session);
       if (!product) throw new Error(`Product not found: ${item.productId}`);
-      
-      if (product.currentStock < item.quantity) {
-        throw new Error(`Insufficient Stock for ${product.name}. Available: ${product.currentStock}, Requested: ${item.quantity}`);
-      }
     }
 
     // Generate unique invoice number (e.g., INV-YYYYMMDD-XXXX)
@@ -150,10 +146,7 @@ const toggleSaleStatus = async (req, res) => {
         }], { session });
 
       } else {
-        // Restore sale (Decrease stock again)
-        if (product.currentStock < item.quantity) {
-          throw new Error(`Cannot restore sale. Insufficient Stock for product. Available: ${product.currentStock}, Requested: ${item.quantity}`);
-        }
+        // Restore sale (Decrease stock again, allowing negative stock)
         product.currentStock -= Number(item.quantity);
 
         await StockMovement.create([{
