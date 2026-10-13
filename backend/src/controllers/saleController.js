@@ -95,7 +95,7 @@ const createSale = async (req, res) => {
       }
 
       // 2. Generate unique atomic invoice number
-      const invoiceNumber = await getNextSequence('sale_invoice', 'INV', 4, session);
+      const invoiceNumber = await getNextSequence('sale_invoice', 'INV', 4, session, Sale, 'invoiceNumber');
 
       // 3. Create Sale Document
       const sale = new Sale({

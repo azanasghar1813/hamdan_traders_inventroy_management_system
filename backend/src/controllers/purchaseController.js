@@ -95,7 +95,7 @@ const createPurchase = async (req, res) => {
       }
 
       // 2. Generate unique atomic purchase number
-      const purchaseNumber = await getNextSequence('purchase_invoice', 'PUR', 4, session);
+      const purchaseNumber = await getNextSequence('purchase_invoice', 'PUR', 4, session, Purchase, 'purchaseNumber');
 
       // 3. Create Purchase Document
       const purchase = new Purchase({
