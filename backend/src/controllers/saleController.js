@@ -2,7 +2,8 @@ const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const StockMovement = require('../models/StockMovement');
-const mongoose = require('mongoose');
+const { getNextSequence } = require('../models/Counter');
+const { runInTransaction } = require('../utils/transactionHelper');
 
 // @desc    Get all sales
 // @route   GET /api/sales
@@ -12,13 +13,15 @@ const getSales = async (req, res) => {
     const sales = await Sale.find({})
       .populate('customerId', 'name phone')
       .sort({ createdAt: -1 });
+
     res.json({ success: true, data: sales });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('getSales error:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve sales' });
   }
 };
 
-// @desc    Get sale by ID
+// @desc    Get single sale
 // @route   GET /api/sales/:id
 // @access  Private
 const getSaleById = async (req, res) => {
@@ -26,13 +29,15 @@ const getSaleById = async (req, res) => {
     const sale = await Sale.findById(req.params.id)
       .populate('customerId', 'name phone address')
       .populate('items.productId', 'name unit');
-      
+
     if (!sale) {
       return res.status(404).json({ success: false, message: 'Sale not found' });
     }
+
     res.json({ success: true, data: sale });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('getSaleById error:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve sale details' });
   }
 };
 
@@ -40,77 +45,102 @@ const getSaleById = async (req, res) => {
 // @route   POST /api/sales
 // @access  Private
 const createSale = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const { customerId, items, subtotal, discount, grandTotal, paid, remaining, date } = req.body;
+    const { customerId, items, discount = 0, paid = 0, date } = req.body;
 
-    if (!items || items.length === 0) {
-      throw new Error('No sale items provided');
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No sale items provided' });
     }
 
-    // 1. Verify all products exist
-    for (const item of items) {
-      const product = await Product.findById(item.productId).session(session);
-      if (!product) throw new Error(`Product not found: ${item.productId}`);
+    if (!customerId) {
+      return res.status(400).json({ success: false, message: 'Customer ID is required' });
     }
 
-    // Generate unique invoice number (e.g., INV-YYYYMMDD-XXXX)
-    const count = await Sale.countDocuments();
-    const invoiceNumber = `INV-${(count + 1).toString().padStart(4, '0')}`;
+    // Server-side Financial Calculations
+    let calculatedSubtotal = 0;
+    const validatedItems = items.map(item => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      const total = quantity * unitPrice;
+      calculatedSubtotal += total;
+
+      return {
+        productId: item.productId,
+        quantity,
+        unitPrice,
+        total
+      };
+    });
+
+    const validatedDiscount = Math.max(0, Number(discount) || 0);
+    const validatedPaid = Math.max(0, Number(paid) || 0);
+    const calculatedGrandTotal = Math.max(0, calculatedSubtotal - validatedDiscount);
+    const calculatedRemaining = Math.max(0, calculatedGrandTotal - validatedPaid);
 
     let status = 'UNPAID';
-    if (paid >= grandTotal) status = 'PAID';
-    else if (paid > 0) status = 'PARTIAL';
+    if (validatedPaid >= calculatedGrandTotal && calculatedGrandTotal > 0) status = 'PAID';
+    else if (validatedPaid > 0) status = 'PARTIAL';
+    else if (calculatedGrandTotal === 0) status = 'PAID';
 
-    // 2. Create Sale Document
-    const sale = await Sale.create([{
-      invoiceNumber,
-      customerId,
-      items,
-      subtotal,
-      discount: discount || 0,
-      grandTotal,
-      paid,
-      remaining,
-      date: date || new Date(),
-      status
-    }], { session });
+    const result = await runInTransaction(async (session) => {
+      const opts = session ? { session } : {};
 
-    const saleId = sale[0]._id;
+      // 1. Verify all products exist
+      for (const item of validatedItems) {
+        const product = await Product.findById(item.productId).session(session);
+        if (!product) throw new Error(`Product not found: ${item.productId}`);
+      }
 
-    // 3. Process each item (Decrease stock & log movement)
-    for (const item of items) {
-      const product = await Product.findById(item.productId).session(session);
-      
-      product.currentStock -= Number(item.quantity);
-      await product.save({ session });
+      // 2. Generate unique atomic invoice number
+      const invoiceNumber = await getNextSequence('sale_invoice', 'INV', 4, session);
 
-      await StockMovement.create([{
-        productId: item.productId,
-        type: 'SALE',
-        quantity: -Math.abs(Number(item.quantity)), // Ensure it's negative
-        reason: `Sales Invoice: ${invoiceNumber}`,
-        referenceId: saleId,
-        date: date || new Date()
-      }], { session });
-    }
+      // 3. Create Sale Document
+      const sale = new Sale({
+        invoiceNumber,
+        customerId,
+        items: validatedItems,
+        subtotal: calculatedSubtotal,
+        discount: validatedDiscount,
+        grandTotal: calculatedGrandTotal,
+        paid: validatedPaid,
+        remaining: calculatedRemaining,
+        date: date || new Date(),
+        status
+      });
 
-    // 4. Update customer balance (Increase customer balance by remaining unpaid amount)
-    const customer = await Customer.findById(customerId).session(session);
-    if (!customer) throw new Error('Customer not found');
-    
-    customer.currentBalance += Number(remaining);
-    await customer.save({ session });
+      await sale.save(opts);
 
-    await session.commitTransaction();
-    res.status(201).json({ success: true, data: sale[0] });
+      // 4. Process each item (Decrease stock & log movement)
+      for (const item of validatedItems) {
+        const product = await Product.findById(item.productId).session(session);
+        product.currentStock -= Number(item.quantity);
+        await product.save(opts);
+
+        const movement = new StockMovement({
+          productId: item.productId,
+          type: 'SALE',
+          quantity: -Math.abs(Number(item.quantity)),
+          reason: `Sales Invoice: ${invoiceNumber}`,
+          referenceId: sale._id,
+          date: date || new Date()
+        });
+        await movement.save(opts);
+      }
+
+      // 5. Update customer balance
+      const customer = await Customer.findById(customerId).session(session);
+      if (!customer) throw new Error('Customer not found');
+
+      customer.currentBalance += Number(calculatedRemaining);
+      await customer.save(opts);
+
+      return sale;
+    });
+
+    res.status(201).json({ success: true, data: result });
   } catch (error) {
-    await session.abortTransaction();
-    res.status(400).json({ success: false, message: error.message });
-  } finally {
-    session.endSession();
+    console.error('createSale error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to create sale' });
   }
 };
 
@@ -118,72 +148,73 @@ const createSale = async (req, res) => {
 // @route   PUT /api/sales/:id/toggle-cancel
 // @access  Private
 const toggleSaleStatus = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const sale = await Sale.findById(req.params.id).session(session);
-    if (!sale) throw new Error('Sale not found');
+    const updatedSale = await runInTransaction(async (session) => {
+      const opts = session ? { session } : {};
 
-    const isCancelling = !sale.isCancelled;
+      const sale = await Sale.findById(req.params.id).session(session);
+      if (!sale) throw new Error('Sale not found');
 
-    // 1. Process each item
-    for (const item of sale.items) {
-      const product = await Product.findById(item.productId).session(session);
-      if (!product) continue;
+      const isCancelling = !sale.isCancelled;
 
-      if (isCancelling) {
-        // Revert stock (Increase stock because sale is cancelled)
-        product.currentStock += Number(item.quantity);
-        
-        await StockMovement.create([{
-          productId: item.productId,
-          type: 'SALE_CANCEL',
-          quantity: Math.abs(Number(item.quantity)),
-          reason: `Cancelled Sales Invoice: ${sale.invoiceNumber}`,
-          referenceId: sale._id,
-          date: new Date()
-        }], { session });
+      // 1. Process items stock restoration / reversal
+      for (const item of sale.items) {
+        const product = await Product.findById(item.productId).session(session);
+        if (!product) continue;
 
-      } else {
-        // Restore sale (Decrease stock again, allowing negative stock)
-        product.currentStock -= Number(item.quantity);
+        if (isCancelling) {
+          product.currentStock += Number(item.quantity);
+          const movement = new StockMovement({
+            productId: item.productId,
+            type: 'SALE_CANCEL',
+            quantity: Math.abs(Number(item.quantity)),
+            reason: `Cancelled Sales Invoice: ${sale.invoiceNumber}`,
+            referenceId: sale._id,
+            date: new Date()
+          });
+          await movement.save(opts);
+        } else {
+          product.currentStock -= Number(item.quantity);
+          const movement = new StockMovement({
+            productId: item.productId,
+            type: 'SALE_RESTORE',
+            quantity: -Math.abs(Number(item.quantity)),
+            reason: `Restored Sales Invoice: ${sale.invoiceNumber}`,
+            referenceId: sale._id,
+            date: new Date()
+          });
+          await movement.save(opts);
+        }
 
-        await StockMovement.create([{
-          productId: item.productId,
-          type: 'SALE_RESTORE',
-          quantity: -Math.abs(Number(item.quantity)),
-          reason: `Restored Sales Invoice: ${sale.invoiceNumber}`,
-          referenceId: sale._id,
-          date: new Date()
-        }], { session });
+        await product.save(opts);
       }
-      
-      await product.save({ session });
-    }
 
-    // 2. Update customer balance
-    const customer = await Customer.findById(sale.customerId).session(session);
-    if (customer) {
-      if (isCancelling) {
-        customer.currentBalance -= Number(sale.remaining);
-      } else {
-        customer.currentBalance += Number(sale.remaining);
+      // 2. Update customer balance
+      const customer = await Customer.findById(sale.customerId).session(session);
+      if (customer) {
+        if (isCancelling) {
+          customer.currentBalance -= Number(sale.remaining);
+        } else {
+          customer.currentBalance += Number(sale.remaining);
+        }
+        await customer.save(opts);
       }
-      await customer.save({ session });
-    }
 
-    // 3. Update sale status
-    sale.isCancelled = isCancelling;
-    await sale.save({ session });
+      // 3. Update sale status
+      sale.isCancelled = isCancelling;
+      await sale.save(opts);
 
-    await session.commitTransaction();
-    res.json({ success: true, data: sale, message: isCancelling ? 'Sale cancelled successfully' : 'Sale restored successfully' });
+      return { sale, isCancelling };
+    });
+
+    res.json({
+      success: true,
+      data: updatedSale.sale,
+      message: updatedSale.isCancelling ? 'Sale cancelled successfully' : 'Sale restored successfully'
+    });
   } catch (error) {
-    await session.abortTransaction();
-    res.status(400).json({ success: false, message: error.message });
-  } finally {
-    session.endSession();
+    console.error('toggleSaleStatus error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to update sale status' });
   }
 };
 
@@ -191,49 +222,53 @@ const toggleSaleStatus = async (req, res) => {
 // @route   POST /api/sales/:id/payment
 // @access  Private
 const addSalePayment = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const { amount } = req.body;
     const paymentAmount = Number(amount);
 
     if (!paymentAmount || paymentAmount <= 0) {
-      throw new Error('Please provide a valid payment amount');
+      return res.status(400).json({ success: false, message: 'Please provide a valid payment amount' });
     }
 
-    const sale = await Sale.findById(req.params.id).session(session);
-    if (!sale) throw new Error('Sale not found');
-    if (sale.isCancelled) throw new Error('Cannot add payment to a cancelled sale');
-    if (sale.remaining <= 0) throw new Error('This invoice is already fully paid');
-    if (paymentAmount > sale.remaining) throw new Error(`Payment amount (Rs. ${paymentAmount}) cannot exceed remaining balance (Rs. ${sale.remaining})`);
+    const updatedSale = await runInTransaction(async (session) => {
+      const opts = session ? { session } : {};
 
-    // 1. Update Sale amounts and status
-    sale.paid += paymentAmount;
-    sale.remaining -= paymentAmount;
-    
-    if (sale.remaining <= 0) {
-      sale.status = 'PAID';
-    } else {
-      sale.status = 'PARTIAL';
-    }
-    
-    await sale.save({ session });
+      const sale = await Sale.findById(req.params.id).session(session);
+      if (!sale) throw new Error('Sale not found');
+      if (sale.isCancelled) throw new Error('Cannot add payment to a cancelled sale');
+      if (sale.remaining <= 0) throw new Error('This invoice is already fully paid');
+      if (paymentAmount > sale.remaining) {
+        throw new Error(`Payment amount (Rs. ${paymentAmount}) cannot exceed remaining balance (Rs. ${sale.remaining})`);
+      }
 
-    // 2. Update Customer Balance
-    const customer = await Customer.findById(sale.customerId).session(session);
-    if (customer) {
-      customer.currentBalance -= paymentAmount;
-      await customer.save({ session });
-    }
+      sale.paid += paymentAmount;
+      sale.remaining -= paymentAmount;
 
-    await session.commitTransaction();
-    res.json({ success: true, data: sale, message: `Payment of Rs. ${paymentAmount} added successfully` });
+      if (sale.remaining <= 0) {
+        sale.status = 'PAID';
+      } else {
+        sale.status = 'PARTIAL';
+      }
+
+      await sale.save(opts);
+
+      const customer = await Customer.findById(sale.customerId).session(session);
+      if (customer) {
+        customer.currentBalance -= paymentAmount;
+        await customer.save(opts);
+      }
+
+      return sale;
+    });
+
+    res.json({
+      success: true,
+      data: updatedSale,
+      message: `Payment of Rs. ${paymentAmount} added successfully`
+    });
   } catch (error) {
-    await session.abortTransaction();
-    res.status(400).json({ success: false, message: error.message });
-  } finally {
-    session.endSession();
+    console.error('addSalePayment error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to process payment' });
   }
 };
 

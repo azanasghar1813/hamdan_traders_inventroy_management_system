@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FiPlus, FiEdit, FiSearch, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -23,10 +23,6 @@ const ProductsPage = () => {
     isActive: true
   });
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   const fetchProducts = async (keyword = '') => {
     try {
       const { data } = await api.get(`/products${keyword ? `?keyword=${keyword}` : ''}`);
@@ -37,6 +33,24 @@ const ProductsPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const { data } = await api.get('/products');
+        if (!ignore) setProducts(data.data);
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
 
 
@@ -93,6 +107,7 @@ const ProductsPage = () => {
     try {
       await api.put(`/products/${product._id}`, { isActive: nextStatus });
     } catch (err) {
+      console.error('Error updating product status:', err);
       // Revert on error
       setProducts(prev => prev.map(p => p._id === product._id ? { ...p, isActive: !nextStatus } : p));
       alert('Error updating status');

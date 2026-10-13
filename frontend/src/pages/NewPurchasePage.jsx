@@ -14,22 +14,28 @@ const NewPurchasePage = () => {
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
 
-  useEffect(() => {
-    fetchSuppliersAndProducts();
-  }, []);
 
-  const fetchSuppliersAndProducts = async () => {
-    try {
-      const [suppRes, prodRes] = await Promise.all([
-        api.get('/suppliers'),
-        api.get('/products')
-      ]);
-      setSuppliers(suppRes.data.data.filter(s => s.isActive));
-      setProducts(prodRes.data.data.filter(p => p.isActive));
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const [suppRes, prodRes] = await Promise.all([
+          api.get('/suppliers'),
+          api.get('/products')
+        ]);
+        if (!ignore) {
+          setSuppliers(suppRes.data.data.filter(s => s.isActive));
+          setProducts(prodRes.data.data.filter(p => p.isActive));
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
@@ -162,7 +168,7 @@ const NewPurchasePage = () => {
           <button 
             type="button" 
             onClick={addItem} 
-            className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="mt-2 min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md transition-colors cursor-pointer inline-flex items-center"
           >
             + Add Another Item
           </button>
@@ -180,7 +186,7 @@ const NewPurchasePage = () => {
                 type="number" min="0" 
                 value={discount} 
                 onChange={(e) => setDiscount(Number(e.target.value))}
-                className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
+                className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-right text-base"
               />
             </div>
             <div className="flex justify-between mb-4 text-lg font-bold">
@@ -196,7 +202,7 @@ const NewPurchasePage = () => {
                 type="number" min="0" 
                 value={paid} 
                 onChange={(e) => setPaid(Number(e.target.value))}
-                className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
+                className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-right text-base"
               />
             </div>
             <div className="flex justify-between text-sm">
@@ -211,7 +217,7 @@ const NewPurchasePage = () => {
         <div className="mt-8 flex justify-end">
           <button 
             type="submit" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium shadow-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 min-h-[44px] rounded-md font-semibold shadow-sm transition-colors cursor-pointer text-base"
           >
             Save Purchase
           </button>

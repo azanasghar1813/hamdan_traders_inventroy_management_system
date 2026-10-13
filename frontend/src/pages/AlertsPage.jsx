@@ -9,22 +9,28 @@ const AlertsPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let ignore = false;
+    const fetchAlerts = async () => {
+      try {
+        const { data } = await api.get('/alerts');
+        if (!ignore) {
+          setLowStock(data.data.lowStock || []);
+          setExpiring(data.data.expiring || []);
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
     fetchAlerts();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const fetchAlerts = async () => {
-    try {
-      const { data } = await api.get('/alerts');
-      setLowStock(data.data.lowStock);
-      setExpiring(data.data.expiring);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return <div className="text-center py-10">Loading alerts...</div>;
+  if (loading) return <div className="text-center py-10 font-medium text-gray-500">Loading alerts...</div>;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -40,7 +46,7 @@ const AlertsPage = () => {
           </div>
           
           <div className="p-0 overflow-y-auto overflow-x-auto max-h-96">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 responsive-table">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -51,14 +57,13 @@ const AlertsPage = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {lowStock.map(item => (
                   <tr key={item._id} className="hover:bg-red-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap" data-label="Product">
                       <div className="text-sm font-medium text-gray-900">{item.name}</div>
-
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600 text-right">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600 text-right" data-label="Current Stock">
                       {item.currentStock} {item.unit}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right" data-label="Min Required">
                       {item.minimumStock} {item.unit}
                     </td>
                   </tr>
@@ -83,7 +88,7 @@ const AlertsPage = () => {
           </div>
           
           <div className="p-0 overflow-y-auto overflow-x-auto max-h-96">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 responsive-table">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -98,14 +103,14 @@ const AlertsPage = () => {
 
                   return (
                     <tr key={item._id} className={isExpired ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-yellow-50'}>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap" data-label="Product">
                         <div className="text-sm font-medium text-gray-900">{item.name}</div>
                         <div className="text-xs text-gray-500">{format(new Date(item.expiryDate), 'dd MMM yyyy')}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium" data-label="Current Stock">
                         {item.currentStock} {item.unit}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right" data-label="Expires In">
                         {isExpired ? (
                           <span className="text-red-600 font-bold">Expired {Math.abs(daysLeft)} days ago</span>
                         ) : (
@@ -113,7 +118,7 @@ const AlertsPage = () => {
                         )}
                       </td>
                     </tr>
-                  )
+                  );
                 })}
                 {expiring.length === 0 && (
                   <tr>

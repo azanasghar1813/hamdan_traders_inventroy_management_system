@@ -9,19 +9,23 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    let ignore = false;
+    const loadDashboard = async () => {
+      try {
+        const { data } = await api.get('/dashboard');
+        if (!ignore) setStats(data.data);
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
 
-  const fetchDashboardStats = async () => {
-    try {
-      const { data } = await api.get('/dashboard');
-      setStats(data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadDashboard();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   if (loading) return <div className="text-center py-10">Loading dashboard...</div>;
   if (!stats) return <div className="text-center py-10 text-red-500">Failed to load data.</div>;
@@ -143,7 +147,7 @@ const Dashboard = () => {
           </div>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 responsive-table">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -154,11 +158,11 @@ const Dashboard = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {lowStockProducts && lowStockProducts.map(product => (
                   <tr key={product._id}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-bold text-red-600">
+                    <td data-label="Product" className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
+                    <td data-label="Current Stock" className="px-4 py-3 whitespace-nowrap text-sm text-right font-bold text-red-600">
                       {product.currentStock} {product.unit}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
+                    <td data-label="Min Stock" className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
                       {product.minimumStock} {product.unit}
                     </td>
                   </tr>

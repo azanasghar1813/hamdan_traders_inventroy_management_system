@@ -3,10 +3,23 @@ const generateToken = require('../utils/generateToken');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
-// @access  Public (Initial setup) or Admin
+// @access  Public (Initial setup if 0 users exist) or Admin
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+
+    const userCount = await User.countDocuments();
+    const isFirstUser = userCount === 0;
+
+    // If users already exist, only authenticated ADMIN can register new users
+    if (!isFirstUser) {
+      if (!req.user || req.user.role !== 'ADMIN') {
+        return res.status(403).json({
+          success: false,
+          message: 'Only administrators can register new users'
+        });
+      }
+    }
 
     const userExists = await User.findOne({ email });
 
@@ -18,7 +31,7 @@ const registerUser = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'STAFF'
+      role: isFirstUser ? 'ADMIN' : (role || 'STAFF')
     });
 
     if (user) {
@@ -30,7 +43,8 @@ const registerUser = async (req, res) => {
           email: user.email,
           role: user.role,
           token: generateToken(user._id)
-        }
+        },
+        message: isFirstUser ? 'Initial Administrator account created successfully' : 'User registered successfully'
       });
     } else {
       res.status(400).json({ success: false, message: 'Invalid user data' });

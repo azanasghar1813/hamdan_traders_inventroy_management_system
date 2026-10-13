@@ -40,17 +40,6 @@ const PurchasesPage = () => {
   const [paymentModalData, setPaymentModalData] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
-  // Update selected supplier if URL parameter changes
-  useEffect(() => {
-    if (urlSupplierId) {
-      setSelectedSupplierId(urlSupplierId);
-    }
-  }, [urlSupplierId]);
-
-  useEffect(() => {
-    fetchPurchasesAndSuppliers();
-  }, []);
-
   const fetchPurchasesAndSuppliers = async () => {
     try {
       const [purchasesRes, suppRes] = await Promise.all([
@@ -65,6 +54,30 @@ const PurchasesPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const [purchasesRes, suppRes] = await Promise.all([
+          api.get('/purchases'),
+          api.get('/suppliers')
+        ]);
+        if (!ignore) {
+          setPurchases(purchasesRes.data.data);
+          setSuppliers(suppRes.data.data);
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleToggleCancel = async (purchase) => {
     const action = purchase.isCancelled ? 'restore' : 'cancel';

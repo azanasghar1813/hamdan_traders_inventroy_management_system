@@ -20,12 +20,7 @@ const StockPage = () => {
 
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' or 'movements'
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
-    setLoading(true);
     try {
       const [productsRes, movementsRes] = await Promise.all([
         api.get('/products'),
@@ -39,6 +34,30 @@ const StockPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const [productsRes, movementsRes] = await Promise.all([
+          api.get('/products'),
+          api.get('/stock')
+        ]);
+        if (!ignore) {
+          setProducts(productsRes.data.data);
+          setMovements(movementsRes.data.data);
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const openAdjustmentModal = (product) => {
     setSelectedProductId(product._id);

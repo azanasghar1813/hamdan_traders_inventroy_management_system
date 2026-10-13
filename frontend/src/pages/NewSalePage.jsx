@@ -14,23 +14,28 @@ const NewSalePage = () => {
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
 
-  useEffect(() => {
-    fetchCustomersAndProducts();
-  }, []);
 
-  const fetchCustomersAndProducts = async () => {
-    try {
-      const [custRes, prodRes] = await Promise.all([
-        api.get('/customers'),
-        api.get('/products')
-      ]);
-      setCustomers(custRes.data.data.filter(c => c.isActive));
-      // Show all active products (even if out of stock, so they appear in the list)
-      setProducts(prodRes.data.data.filter(p => p.isActive));
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const [custRes, prodRes] = await Promise.all([
+          api.get('/customers'),
+          api.get('/products')
+        ]);
+        if (!ignore) {
+          setCustomers(custRes.data.data.filter(c => c.isActive));
+          setProducts(prodRes.data.data.filter(p => p.isActive));
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
@@ -113,8 +118,6 @@ const NewSalePage = () => {
         <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-900 mb-3 border-b pb-2">Sale Items</h3>
           {items.map((item, index) => {
-            const selectedProduct = products.find(p => p._id === item.productId);
-
             return (
               <div key={index} className="flex flex-col md:flex-row gap-4 items-start md:items-end mb-4 p-4 rounded-md border border-transparent bg-gray-50">
                 <div className="flex-1 w-full">
@@ -171,7 +174,7 @@ const NewSalePage = () => {
           <button 
             type="button" 
             onClick={addItem} 
-            className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="mt-2 min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md transition-colors cursor-pointer inline-flex items-center"
           >
             + Add Another Item
           </button>
@@ -189,7 +192,7 @@ const NewSalePage = () => {
                 type="number" min="0" 
                 value={discount} 
                 onChange={(e) => setDiscount(Number(e.target.value))}
-                className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
+                className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-right text-base"
               />
             </div>
             <div className="flex justify-between mb-4 text-lg font-bold">
@@ -205,7 +208,7 @@ const NewSalePage = () => {
                 type="number" min="0" 
                 value={paid} 
                 onChange={(e) => setPaid(Number(e.target.value))}
-                className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
+                className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-right text-base"
               />
             </div>
             <div className="flex justify-between text-sm">
@@ -220,7 +223,7 @@ const NewSalePage = () => {
         <div className="mt-8 flex justify-end">
           <button 
             type="submit" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium shadow-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 min-h-[44px] rounded-md font-semibold shadow-sm transition-colors cursor-pointer text-base"
           >
             Complete Sale
           </button>

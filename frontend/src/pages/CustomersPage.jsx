@@ -22,10 +22,6 @@ const CustomersPage = () => {
     name: '', phone: '', address: '', openingBalance: 0, isActive: true
   });
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
   const fetchCustomers = async (keyword = '') => {
     try {
       const { data } = await api.get(`/customers${keyword ? `?keyword=${keyword}` : ''}`);
@@ -36,6 +32,24 @@ const CustomersPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const { data } = await api.get('/customers');
+        if (!ignore) setCustomers(data.data);
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -100,6 +114,7 @@ const CustomersPage = () => {
     try {
       await api.put(`/customers/${customer._id}`, { isActive: nextStatus });
     } catch (err) {
+      console.error('Error toggling customer status:', err);
       setCustomers(prev => prev.map(c => c._id === customer._id ? { ...c, isActive: !nextStatus } : c));
       alert('Error updating status');
     }

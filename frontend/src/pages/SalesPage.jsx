@@ -36,20 +36,8 @@ const SalesPage = () => {
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
 
-  // Payment Modal State
   const [paymentModalData, setPaymentModalData] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
-
-  // Update selected customer if URL parameter changes
-  useEffect(() => {
-    if (urlCustomerId) {
-      setSelectedCustomerId(urlCustomerId);
-    }
-  }, [urlCustomerId]);
-
-  useEffect(() => {
-    fetchSalesAndCustomers();
-  }, []);
 
   const fetchSalesAndCustomers = async () => {
     try {
@@ -65,6 +53,30 @@ const SalesPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const [salesRes, custRes] = await Promise.all([
+          api.get('/sales'),
+          api.get('/customers')
+        ]);
+        if (!ignore) {
+          setSales(salesRes.data.data);
+          setCustomers(custRes.data.data);
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleToggleCancel = async (sale) => {
     const action = sale.isCancelled ? 'restore' : 'cancel';

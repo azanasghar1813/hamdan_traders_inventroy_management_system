@@ -46,12 +46,36 @@ app.use('/api/users', userRoutes);
 app.get('/', (req, res) => res.send('API is running'));
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok', message: 'API is running' }));
 
-// Error Handling Middleware
+// Centralized Error Handling Middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
+  console.error('Unhandled Application Error:', err);
+
+  // MongoDB duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    return res.status(409).json({
+      success: false,
+      message: `A record with this ${field} already exists.`
+    });
+  }
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const messages = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({
+      success: false,
+      message: messages.join(', ')
+    });
+  }
+
+  const statusCode = err.status || err.statusCode || 500;
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  res.status(statusCode).json({
     success: false,
-    error: err.message || 'Server Error'
+    message: statusCode === 500 && !isDev
+      ? 'An unexpected internal error occurred. Please try again later.'
+      : (err.message || 'Server Error')
   });
 });
 

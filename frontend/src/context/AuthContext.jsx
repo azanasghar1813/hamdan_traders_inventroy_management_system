@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 export const AuthContext = createContext();
@@ -21,7 +22,13 @@ export const AuthProvider = ({ children }) => {
     return null;
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('userInfo');
+    delete api.defaults.headers.common['Authorization'];
+    setUser(null);
+  }, []);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -46,7 +53,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     verifyUser();
-  }, []);
+  }, [logout]);
 
   const login = async (email, password) => {
     try {
@@ -67,12 +74,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return { success: false, message: error.response?.data?.message || 'Login failed' };
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('userInfo');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
   };
 
   return (

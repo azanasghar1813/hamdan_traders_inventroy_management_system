@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FiPlus, FiEdit2, FiTrash2, FiUser, FiUserCheck, FiUserX, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -20,12 +20,7 @@ const UsersPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [selectedUserDetails, setSelectedUserDetails] = useState(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
-    setLoading(true);
     try {
       const { data } = await api.get('/users');
       setUsers(data.data);
@@ -36,6 +31,24 @@ const UsersPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const { data } = await api.get('/users');
+        if (!ignore) setUsers(data.data);
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const openModal = (user = null) => {
     setFormError('');

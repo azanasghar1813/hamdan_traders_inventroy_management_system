@@ -22,10 +22,6 @@ const SuppliersPage = () => {
     name: '', phone: '', address: '', openingBalance: 0, isActive: true
   });
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
-
   const fetchSuppliers = async (keyword = '') => {
     try {
       const { data } = await api.get(`/suppliers${keyword ? `?keyword=${keyword}` : ''}`);
@@ -36,6 +32,24 @@ const SuppliersPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const { data } = await api.get('/suppliers');
+        if (!ignore) setSuppliers(data.data);
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -100,6 +114,7 @@ const SuppliersPage = () => {
     try {
       await api.put(`/suppliers/${supplier._id}`, { isActive: nextStatus });
     } catch (err) {
+      console.error('Error updating supplier status:', err);
       setSuppliers(prev => prev.map(s => s._id === supplier._id ? { ...s, isActive: !nextStatus } : s));
       alert('Error updating status');
     }

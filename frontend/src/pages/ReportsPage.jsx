@@ -9,46 +9,52 @@ import html2canvas from 'html2canvas-pro';
 const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState('sales');
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+  });
 
   const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [queryTrigger, setQueryTrigger] = useState(0);
 
   useEffect(() => {
-    // Default to current month
-    const date = new Date();
-    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    let ignore = false;
+    const loadReport = async () => {
+      if (!startDate || !endDate) return;
+      try {
+        const endpoint = activeTab === 'sales' ? '/reports/sales' : '/reports/purchases';
+        const { data } = await api.get(`${endpoint}?startDate=${startDate}&endDate=${endDate}`);
+        if (!ignore) {
+          setReportData(data.data);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          setReportData(null);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
 
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
-  }, []);
-
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchReport();
-    }
-  }, [activeTab, startDate, endDate]);
-
-  const fetchReport = async () => {
-    setLoading(true);
-    setReportData(null); // Prevent crash on tab switch by clearing old data shape
-    try {
-      const endpoint = activeTab === 'sales' ? '/reports/sales' : '/reports/purchases';
-      const { data } = await api.get(`${endpoint}?startDate=${startDate}&endDate=${endDate}`);
-      setReportData(data.data);
-    } catch (err) {
-      console.error(err);
-      setReportData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadReport();
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab, startDate, endDate, queryTrigger]);
 
   const handleFilter = (e) => {
     e.preventDefault();
-    fetchReport();
+    setLoading(true);
+    setReportData(null);
+    setQueryTrigger((prev) => prev + 1);
   };
 
   const exportToPDF = () => {
@@ -152,14 +158,22 @@ const ReportsPage = () => {
           <button
             className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium ${activeTab === 'sales' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'
               }`}
-            onClick={() => setActiveTab('sales')}
+            onClick={() => {
+              setActiveTab('sales');
+              setLoading(true);
+              setReportData(null);
+            }}
           >
             Sales Report
           </button>
           <button
             className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-medium ${activeTab === 'purchases' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'
               }`}
-            onClick={() => setActiveTab('purchases')}
+            onClick={() => {
+              setActiveTab('purchases');
+              setLoading(true);
+              setReportData(null);
+            }}
           >
             Purchases Report
           </button>
@@ -249,7 +263,7 @@ const ReportsPage = () => {
 
             {/* Data Table */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 responsive-table">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -267,25 +281,25 @@ const ReportsPage = () => {
                   {activeTab === 'sales' ? (
                     reportData.sales?.map((sale) => (
                       <tr key={sale._id} className={`hover:bg-gray-50 ${sale.isCancelled ? 'bg-red-50/60' : ''}`}>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-700 line-through' : 'text-gray-500'}`}>
+                        <td data-label="Date" className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-700 line-through' : 'text-gray-500'}`}>
                           {sale.date ? format(new Date(sale.date), 'dd MMM yyyy') : '-'}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${sale.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
+                        <td data-label="Reference" className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${sale.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
                           {sale.invoiceNumber}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-700' : 'text-gray-900'}`}>
+                        <td data-label="Customer" className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-700' : 'text-gray-900'}`}>
                           {sale.customerId?.name}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${sale.isCancelled ? 'text-red-600 line-through' : ''}`}>
+                        <td data-label="Total" className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${sale.isCancelled ? 'text-red-600 line-through' : ''}`}>
                           Rs. {sale.grandTotal?.toLocaleString()}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-gray-400 line-through' : 'text-green-600'}`}>
+                        <td data-label="Paid" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-gray-400 line-through' : 'text-green-600'}`}>
                           Rs. {sale.paid?.toLocaleString()}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-gray-400 line-through' : 'text-red-600'}`}>
+                        <td data-label="Remaining" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${sale.isCancelled ? 'text-gray-400 line-through' : 'text-red-600'}`}>
                           Rs. {sale.remaining?.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                        <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
                           {sale.isCancelled ? (
                             <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800 border border-red-200">
                               CANCELLED
@@ -308,25 +322,25 @@ const ReportsPage = () => {
                   ) : (
                     reportData.purchases?.map((pur) => (
                       <tr key={pur._id} className={`hover:bg-gray-50 ${pur.isCancelled ? 'bg-red-50/60' : ''}`}>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${pur.isCancelled ? 'text-red-700 line-through' : 'text-gray-500'}`}>
+                        <td data-label="Date" className={`px-6 py-4 whitespace-nowrap text-sm ${pur.isCancelled ? 'text-red-700 line-through' : 'text-gray-500'}`}>
                           {pur.date ? format(new Date(pur.date), 'dd MMM yyyy') : '-'}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${pur.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
+                        <td data-label="Reference" className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${pur.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
                           {pur.purchaseNumber}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${pur.isCancelled ? 'text-red-700' : 'text-gray-900'}`}>
+                        <td data-label="Supplier" className={`px-6 py-4 whitespace-nowrap text-sm ${pur.isCancelled ? 'text-red-700' : 'text-gray-900'}`}>
                           {pur.supplierId?.name}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${pur.isCancelled ? 'text-red-600 line-through' : ''}`}>
+                        <td data-label="Total" className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${pur.isCancelled ? 'text-red-600 line-through' : ''}`}>
                           Rs. {pur.grandTotal?.toLocaleString()}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${pur.isCancelled ? 'text-gray-400 line-through' : 'text-green-600'}`}>
+                        <td data-label="Paid" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${pur.isCancelled ? 'text-gray-400 line-through' : 'text-green-600'}`}>
                           Rs. {pur.paid?.toLocaleString()}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${pur.isCancelled ? 'text-gray-400 line-through' : 'text-red-600'}`}>
+                        <td data-label="Remaining" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${pur.isCancelled ? 'text-gray-400 line-through' : 'text-red-600'}`}>
                           Rs. {pur.remaining?.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                        <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
                           {pur.isCancelled ? (
                             <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800 border border-red-200">
                               CANCELLED

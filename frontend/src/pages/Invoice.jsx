@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { FiPrinter, FiArrowLeft, FiShare2, FiImage, FiFileText } from 'react-icons/fi';
+import { FiPrinter, FiArrowLeft, FiShare2 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -20,21 +20,26 @@ const Invoice = () => {
   const [isSharing, setIsSharing] = useState(null); // 'pdf' or 'image' or null
 
   useEffect(() => {
-    fetchInvoiceDetails();
-  }, [id]);
-
-  const fetchInvoiceDetails = async () => {
-    try {
-      const endpoint = isSale ? `/sales/${id}` : `/purchases/${id}`;
-      const response = await api.get(endpoint);
-      setData(response.data.data);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to load invoice details.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    let ignore = false;
+    const load = async () => {
+      try {
+        const endpoint = isSale ? `/sales/${id}` : `/purchases/${id}`;
+        const response = await api.get(endpoint);
+        if (!ignore) setData(response.data.data);
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          alert('Failed to load invoice details.');
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [id, isSale]);
 
   const handlePrint = () => {
     window.print();

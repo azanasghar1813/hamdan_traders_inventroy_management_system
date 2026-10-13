@@ -16,7 +16,7 @@ const getAlerts = async (req, res) => {
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     const expiringProducts = await Product.find({
-      expiryDate: { $lte: thirtyDaysFromNow },
+      expiryDate: { $ne: null, $lte: thirtyDaysFromNow },
       currentStock: { $gt: 0 },
       isActive: true
     }).sort({ expiryDate: 1 });
