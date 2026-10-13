@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi';
+import useViewPreference from '../hooks/useViewPreference';
+import ViewToggle from '../components/ViewToggle';
+import MobileListView from '../components/MobileListView';
+import MobileCardView from '../components/MobileCardView';
+import { FiPlus, FiSearch, FiTrash2, FiEdit2 } from 'react-icons/fi';
 
 const ProductsPage = () => {
+  const [view, setView] = useViewPreference('products', 'list');
   const [products, setProducts] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -128,7 +133,10 @@ const ProductsPage = () => {
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Products</h1>
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <h1 className="text-2xl font-bold text-gray-800">Products</h1>
+          <ViewToggle view={view} onChange={setView} />
+        </div>
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4">
           <form onSubmit={handleSearch} className="flex-1 md:w-64 relative">
@@ -144,15 +152,16 @@ const ProductsPage = () => {
           
           <button
             onClick={() => openModal()}
-            className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm"
+            className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm min-h-[44px]"
           >
             <FiPlus className="mr-2" /> Add Product
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 responsive-table">
+      {/* Desktop Table (hidden on mobile) */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -185,30 +194,30 @@ const ProductsPage = () => {
             ) : (
               products.map((product) => (
                 <tr key={product._id} className="hover:bg-gray-50">
-                <td data-label="Product" className="px-6 py-4">
-                  <div className="flex flex-col text-right">
+                <td className="px-6 py-4">
+                  <div className="flex flex-col text-left">
                     <div className="text-sm font-medium text-gray-900">{product.name}</div>
                     <div className="text-xs text-gray-500">Unit: {product.unit}</div>
                   </div>
                 </td>
-                <td data-label="Purchase Price" className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                  {product.purchasePrice}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                  Rs. {Number(product.purchasePrice).toLocaleString()}
                 </td>
-                <td data-label="Sale Price" className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                  {product.salePrice}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                  Rs. {Number(product.salePrice).toLocaleString()}
                 </td>
-                <td data-label="Current Stock" className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                   <span className={`font-bold ${product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}`}>
-                    {product.currentStock}
+                    {product.currentStock} {product.unit}
                   </span>
                 </td>
-                <td data-label="Min Stock" className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
-                  {product.minimumStock}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                  {product.minimumStock} {product.unit}
                 </td>
-                <td data-label="Expiry" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {product.expiryDate ? new Date(product.expiryDate).toLocaleDateString() : '-'}
                 </td>
-                <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                   <button
                     type="button"
                     onClick={() => toggleStatus(product)}
@@ -233,7 +242,7 @@ const ProductsPage = () => {
                     </span>
                   </button>
                 </td>
-                <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button onClick={() => openModal(product)} className="text-blue-600 hover:text-blue-900 mr-4">
                     Edit
                   </button>
@@ -245,6 +254,134 @@ const ProductsPage = () => {
             )))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile: List or Card View */}
+      <div className="md:hidden">
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500 text-sm">
+            Loading products...
+          </div>
+        ) : view === 'list' ? (
+          <MobileListView
+            items={products}
+            emptyText="No products found."
+            onSelect={(p) => openModal(p)}
+            renderRow={(p) => {
+              const isLowStock = p.currentStock <= p.minimumStock;
+              return (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 truncate">
+                      {p.name}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                      Unit: {p.unit} {p.expiryDate ? `• Exp: ${new Date(p.expiryDate).toLocaleDateString()}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-sm text-gray-900 whitespace-nowrap">
+                      Rs. {Number(p.salePrice).toLocaleString()}
+                    </p>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      isLowStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {p.currentStock} {p.unit}
+                    </span>
+                  </div>
+                  <span className="text-gray-300 text-xl leading-none ml-1" aria-hidden="true">
+                    ›
+                  </span>
+                </>
+              );
+            }}
+          />
+        ) : (
+          <MobileCardView
+            items={products}
+            emptyText="No products found."
+            onSelect={(p) => openModal(p)}
+            renderCard={(p, onSelect) => {
+              const isLowStock = p.currentStock <= p.minimumStock;
+              return (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start cursor-pointer" onClick={() => onSelect(p)}>
+                    <div>
+                      <div className="text-base font-bold text-gray-900">{p.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Unit: {p.unit}</div>
+                      {p.expiryDate && (
+                        <div className="text-xs text-amber-700 mt-0.5">
+                          Expires: {new Date(p.expiryDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                        isLowStock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        Stock: {p.currentStock} {p.unit}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2 border-gray-100">
+                    <div>
+                      <span className="text-gray-500">Purchase Price: </span>
+                      <span className="font-semibold text-gray-800">Rs. {Number(p.purchasePrice).toLocaleString()}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-gray-500">Sale Price: </span>
+                      <span className="font-semibold text-blue-600">Rs. {Number(p.salePrice).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => toggleStatus(p)}
+                      className="inline-flex items-center gap-2 cursor-pointer focus:outline-none min-h-[44px]"
+                      title={`Click to switch to ${p.isActive ? 'Inactive' : 'Active'}`}
+                    >
+                      <span
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                          p.isActive ? 'bg-green-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            p.isActive ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {p.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openModal(p)}
+                        className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-medium min-h-[36px]"
+                      >
+                        <FiEdit2 className="inline mr-1" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(p)}
+                        className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-medium min-h-[36px]"
+                      >
+                        <FiTrash2 className="inline mr-1" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }}
+          />
+        )}
       </div>
 
       {isModalOpen && (

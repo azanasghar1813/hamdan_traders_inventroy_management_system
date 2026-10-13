@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import useViewPreference from '../hooks/useViewPreference';
+import ViewToggle from '../components/ViewToggle';
+import MobileListView from '../components/MobileListView';
+import MobileCardView from '../components/MobileCardView';
 import { 
   FiPlus, 
   FiEye, 
@@ -17,6 +21,8 @@ import {
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
 const PurchasesPage = () => {
+  const navigate = useNavigate();
+  const [view, setView] = useViewPreference('purchases', 'list');
   const [purchases, setPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -264,13 +270,16 @@ const PurchasesPage = () => {
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Purchases History</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Filter, search, and track all supplier purchase invoices</p>
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Purchases History</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Filter, search, and track all supplier purchase invoices</p>
+          </div>
+          <ViewToggle view={view} onChange={setView} />
         </div>
         <Link
           to="/purchases/new"
-          className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm font-medium transition-colors"
+          className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm font-medium transition-colors min-h-[44px]"
         >
           <FiPlus className="mr-2" /> New Purchase
         </Link>
@@ -467,8 +476,9 @@ const PurchasesPage = () => {
       </div>
 
       {/* Purchases Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 responsive-table">
+      {/* Desktop Table (hidden on mobile) */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th
@@ -546,13 +556,13 @@ const PurchasesPage = () => {
             ) : (
               filteredPurchases.map((purchase) => (
                 <tr key={purchase._id} className={`hover:bg-gray-50 ${purchase.isCancelled ? 'bg-red-50 opacity-75' : ''}`}>
-                  <td data-label="Purchase #" className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${purchase.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${purchase.isCancelled ? 'text-red-700 line-through' : 'text-gray-900'}`}>
                     {purchase.purchaseNumber}
                   </td>
-                  <td data-label="Date" className={`px-6 py-4 whitespace-nowrap text-sm ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-gray-500'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-gray-500'}`}>
                     {format(new Date(purchase.date), 'dd MMM yyyy, hh:mm a')}
                   </td>
-                  <td data-label="Supplier" className={`px-6 py-4 whitespace-nowrap text-sm ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-gray-900'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-gray-900'}`}>
                     <button
                       type="button"
                       onClick={() => setSelectedSupplierId(purchase.supplierId?._id || '')}
@@ -562,16 +572,16 @@ const PurchasesPage = () => {
                       {purchase.supplierId?.name || 'Unknown Supplier'}
                     </button>
                   </td>
-                  <td data-label="Total" className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${purchase.isCancelled ? 'text-red-600 line-through' : ''}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${purchase.isCancelled ? 'text-red-600 line-through' : ''}`}>
                     Rs. {Number(purchase.grandTotal).toLocaleString()}
                   </td>
-                  <td data-label="Paid" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-green-600 font-medium'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-green-600 font-medium'}`}>
                     Rs. {Number(purchase.paid).toLocaleString()}
                   </td>
-                  <td data-label="Remaining" className={`px-6 py-4 whitespace-nowrap text-sm text-right ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-red-600 font-medium'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${purchase.isCancelled ? 'text-red-600 line-through' : 'text-red-600 font-medium'}`}>
                     Rs. {Number(purchase.remaining).toLocaleString()}
                   </td>
-                  <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                     {purchase.isCancelled ? (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                         CANCELLED
@@ -584,7 +594,7 @@ const PurchasesPage = () => {
                       </span>
                     )}
                   </td>
-                  <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link to={`/invoice/purchase/${purchase._id}`} className="text-gray-600 hover:text-blue-900 inline-block mr-4" title="View Invoice">
                       <FiEye size={18} />
                     </Link>
@@ -610,6 +620,133 @@ const PurchasesPage = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile: List or Card View */}
+      <div className="md:hidden">
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500 text-sm">
+            Loading purchases...
+          </div>
+        ) : view === 'list' ? (
+          <MobileListView
+            items={filteredPurchases}
+            emptyText={hasActiveFilters ? "No purchases match your active filters." : "No purchases found."}
+            onSelect={(p) => navigate(`/invoice/purchase/${p._id}`)}
+            renderRow={(p) => (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-semibold truncate text-sm ${p.isCancelled ? 'line-through text-red-700' : 'text-gray-900'}`}>
+                    {p.purchaseNumber}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">
+                    {p.supplierId?.name || 'Unknown Supplier'} • {format(new Date(p.date), 'dd MMM yyyy')}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`font-bold text-sm whitespace-nowrap ${p.isCancelled ? 'line-through text-red-600' : 'text-gray-900'}`}>
+                    Rs. {Number(p.grandTotal).toLocaleString()}
+                  </p>
+                  {p.isCancelled ? (
+                    <span className="text-[11px] font-semibold text-red-600">Cancelled</span>
+                  ) : p.status === 'PAID' ? (
+                    <span className="text-[11px] font-semibold text-green-600">Received / Paid</span>
+                  ) : (
+                    <span className="text-[11px] font-semibold text-amber-600">{p.status}</span>
+                  )}
+                </div>
+                <span className="text-gray-300 text-xl leading-none ml-1" aria-hidden="true">
+                  ›
+                </span>
+              </>
+            )}
+          />
+        ) : (
+          <MobileCardView
+            items={filteredPurchases}
+            emptyText={hasActiveFilters ? "No purchases match your active filters." : "No purchases found."}
+            onSelect={(p) => navigate(`/invoice/purchase/${p._id}`)}
+            renderCard={(p, onSelect) => (
+              <div className="space-y-3">
+                <div className="flex justify-between items-start cursor-pointer" onClick={() => onSelect(p)}>
+                  <div>
+                    <span className={`font-bold text-sm ${p.isCancelled ? 'line-through text-red-700' : 'text-gray-900'}`}>
+                      {p.purchaseNumber}
+                    </span>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {format(new Date(p.date), 'dd MMM yyyy, hh:mm a')}
+                    </div>
+                    <div className="text-xs font-medium text-blue-600 mt-1">
+                      {p.supplierId?.name || 'Unknown Supplier'}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`font-bold text-base ${p.isCancelled ? 'line-through text-red-600' : 'text-gray-900'}`}>
+                      Rs. {Number(p.grandTotal).toLocaleString()}
+                    </div>
+                    <div className="mt-1">
+                      {p.isCancelled ? (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-100 text-red-800">CANCELLED</span>
+                      ) : (
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                          p.status === 'PAID' ? 'bg-green-100 text-green-800' : 
+                          p.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {p.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2 border-gray-100">
+                  <div>
+                    <span className="text-gray-500">Paid: </span>
+                    <span className="font-semibold text-green-600">Rs. {Number(p.paid).toLocaleString()}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-gray-500">Remaining: </span>
+                    <span className="font-semibold text-red-600">Rs. {Number(p.remaining).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 text-xs">
+                  <Link
+                    to={`/invoice/purchase/${p._id}`}
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium flex items-center gap-1 min-h-[36px]"
+                  >
+                    <FiEye /> View Invoice
+                  </Link>
+                  {!p.isCancelled && Number(p.remaining) > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openPaymentModal(p);
+                      }}
+                      className="px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded font-medium flex items-center gap-1 min-h-[36px]"
+                    >
+                      <FiDollarSign /> Pay
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleCancel(p);
+                    }}
+                    className={`px-3 py-1.5 rounded font-medium flex items-center gap-1 min-h-[36px] ${
+                      p.isCancelled ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-red-50 text-red-700 hover:bg-red-100'
+                    }`}
+                  >
+                    {p.isCancelled ? <FiRefreshCw /> : <FiXCircle />}
+                    {p.isCancelled ? 'Restore' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            )}
+          />
+        )}
       </div>
 
       {/* Payment Modal */}

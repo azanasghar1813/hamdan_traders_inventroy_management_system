@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import useViewPreference from '../hooks/useViewPreference';
+import ViewToggle from '../components/ViewToggle';
+import MobileListView from '../components/MobileListView';
+import MobileCardView from '../components/MobileCardView';
 import { FiPlus, FiEdit, FiSearch, FiDollarSign, FiTrash2, FiEye, FiExternalLink, FiFileText } from 'react-icons/fi';
 import { format } from 'date-fns';
 
 const CustomersPage = () => {
+  const [view, setView] = useViewPreference('customers', 'list');
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -141,7 +146,10 @@ const CustomersPage = () => {
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
+          <ViewToggle view={view} onChange={setView} />
+        </div>
         
         <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4">
           <form onSubmit={handleSearch} className="flex-1 md:w-64 relative">
@@ -157,15 +165,16 @@ const CustomersPage = () => {
           
           <button
             onClick={() => openModal()}
-            className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm"
+            className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm min-h-[44px]"
           >
             <FiPlus className="mr-2" /> Add Customer
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 responsive-table">
+      {/* Desktop Table (hidden on mobile) */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -194,7 +203,7 @@ const CustomersPage = () => {
             ) : (
               customers.map((customer) => (
                 <tr key={customer._id} className="hover:bg-gray-50">
-                <td data-label="Name" className="px-6 py-4 whitespace-nowrap text-left">
+                <td className="px-6 py-4 whitespace-nowrap text-left">
                   <div className="flex flex-col text-left">
                     <button
                       type="button"
@@ -208,13 +217,13 @@ const CustomersPage = () => {
                     <div className="text-xs text-gray-500 mt-0.5">{customer.address || '-'}</div>
                   </div>
                 </td>
-                <td data-label="Contact" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.phone || '-'}</td>
-                <td data-label="Current Balance" className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.phone || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                   <span className={customer.currentBalance > 0 ? 'text-red-600' : 'text-gray-900'}>
                     Rs. {customer.currentBalance.toLocaleString()}
                   </span>
                 </td>
-                <td data-label="Status" className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                   <button
                     type="button"
                     onClick={() => toggleStatus(customer)}
@@ -239,7 +248,7 @@ const CustomersPage = () => {
                     </span>
                   </button>
                 </td>
-                <td data-label="Actions" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button onClick={() => openModal(customer)} className="text-blue-600 hover:text-blue-900 mr-3">
                     <FiEdit className="inline" /> Edit
                   </button>
@@ -251,6 +260,113 @@ const CustomersPage = () => {
             )))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile: List or Card View */}
+      <div className="md:hidden">
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500 text-sm">
+            Loading customers...
+          </div>
+        ) : view === 'list' ? (
+          <MobileListView
+            items={customers}
+            emptyText="No customers found."
+            onSelect={(c) => openHistoryModal(c)}
+            renderRow={(c) => (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-gray-900 truncate">
+                    {c.name}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">
+                    {c.phone || 'No phone'} {c.address ? `• ${c.address}` : ''}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`font-bold text-sm whitespace-nowrap ${c.currentBalance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                    Rs. {c.currentBalance.toLocaleString()}
+                  </p>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${c.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {c.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <span className="text-gray-300 text-xl leading-none ml-1" aria-hidden="true">
+                  ›
+                </span>
+              </>
+            )}
+          />
+        ) : (
+          <MobileCardView
+            items={customers}
+            emptyText="No customers found."
+            onSelect={(c) => openHistoryModal(c)}
+            renderCard={(c, onSelect) => (
+              <div className="space-y-3">
+                <div className="flex justify-between items-start cursor-pointer" onClick={() => onSelect(c)}>
+                  <div>
+                    <div className="text-base font-bold text-gray-900 flex items-center gap-1.5">
+                      <span>{c.name}</span>
+                      <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 font-medium">History</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{c.phone || 'No phone number'}</div>
+                    <div className="text-xs text-gray-500">{c.address || 'No address provided'}</div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-gray-500 block">Balance</span>
+                    <span className={`font-bold text-base ${c.currentBalance > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                      Rs. {c.currentBalance.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => toggleStatus(c)}
+                    className="inline-flex items-center gap-2 cursor-pointer focus:outline-none min-h-[44px]"
+                    title={`Click to switch to ${c.isActive ? 'Inactive' : 'Active'}`}
+                  >
+                    <span
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                        c.isActive ? 'bg-green-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          c.isActive ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      c.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {c.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openModal(c)}
+                      className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-medium min-h-[36px]"
+                    >
+                      <FiEdit className="inline mr-1" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c)}
+                      className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-medium min-h-[36px]"
+                    >
+                      <FiTrash2 className="inline mr-1" /> Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          />
+        )}
       </div>
 
       {isModalOpen && (
