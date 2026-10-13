@@ -93,6 +93,42 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Small Secondary Metrics & Cancelled Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-sm border border-red-200 p-4 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-red-600 uppercase tracking-wider block">Cancelled Sales</span>
+            <p className="text-lg font-bold text-red-700 mt-0.5">Rs. {(summary.cancelledSalesAmount || 0).toLocaleString()}</p>
+            <span className="text-[11px] text-gray-400">This Month (Excluded)</span>
+          </div>
+          <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
+            {summary.cancelledSalesCount || 0} orders
+          </span>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-orange-200 p-4 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider block">Cancelled Purchases</span>
+            <p className="text-lg font-bold text-orange-700 mt-0.5">Rs. {(summary.cancelledPurchasesAmount || 0).toLocaleString()}</p>
+            <span className="text-[11px] text-gray-400">This Month (Excluded)</span>
+          </div>
+          <span className="px-2.5 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
+            {summary.cancelledPurchasesCount || 0} orders
+          </span>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-indigo-200 p-4 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider block">Monthly Purchases</span>
+            <p className="text-lg font-bold text-indigo-900 mt-0.5">Rs. {(summary.monthlyPurchasesAmount || 0).toLocaleString()}</p>
+            <span className="text-[11px] text-gray-400">Active Purchases</span>
+          </div>
+          <span className="px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs font-semibold rounded-full">
+            Active
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Low Stock Warnings */}
@@ -151,11 +187,22 @@ const Dashboard = () => {
             {recentSales.map((sale) => (
               <div key={sale._id} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                 <div>
-                  <p className="text-sm font-bold text-gray-800">{sale.invoiceNumber}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-sm font-bold ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-800'}`}>
+                      {sale.invoiceNumber}
+                    </p>
+                    {sale.isCancelled && (
+                      <span className="px-1.5 py-0.2 text-[10px] bg-red-100 text-red-700 font-bold rounded">
+                        Cancelled
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">{sale.customerId?.name || 'Unknown'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-green-600">Rs. {sale.grandTotal.toLocaleString()}</p>
+                  <p className={`text-sm font-bold ${sale.isCancelled ? 'text-red-500 line-through' : 'text-green-600'}`}>
+                    Rs. {sale.grandTotal.toLocaleString()}
+                  </p>
                   <p className="text-[10px] text-gray-400">{new Date(sale.date).toLocaleDateString()}</p>
                 </div>
               </div>

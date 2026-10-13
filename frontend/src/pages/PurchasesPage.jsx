@@ -211,9 +211,14 @@ const PurchasesPage = () => {
     let grandTotal = 0;
     let paid = 0;
     let remaining = 0;
+    let cancelledCount = 0;
+    let cancelledTotal = 0;
 
     filteredPurchases.forEach((p) => {
-      if (!p.isCancelled) {
+      if (p.isCancelled) {
+        cancelledCount += 1;
+        cancelledTotal += Number(p.grandTotal || 0);
+      } else {
         grandTotal += Number(p.grandTotal || 0);
         paid += Number(p.paid || 0);
         remaining += Number(p.remaining || 0);
@@ -221,7 +226,9 @@ const PurchasesPage = () => {
     });
 
     return {
-      count: filteredPurchases.length,
+      activeCount: filteredPurchases.filter(p => !p.isCancelled).length,
+      cancelledCount,
+      cancelledTotal,
       grandTotal,
       paid,
       remaining
@@ -257,22 +264,36 @@ const PurchasesPage = () => {
       </div>
 
       {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-medium text-gray-500 uppercase">Filtered Purchases</span>
-          <p className="text-xl font-bold text-gray-900 mt-1">{summary.count}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Purchases</span>
+          <p className="text-xl font-bold text-gray-900 mt-1">{summary.activeCount}</p>
+          <span className="text-[10px] text-gray-400">Total matched</span>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-medium text-blue-600 uppercase">Total Billed</span>
+        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
+          <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Billed</span>
           <p className="text-xl font-bold text-blue-900 mt-1">Rs. {summary.grandTotal.toLocaleString()}</p>
+          <span className="text-[10px] text-gray-400">Active only</span>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-medium text-green-600 uppercase">Total Paid</span>
+        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
+          <span className="text-xs font-semibold text-green-600 uppercase tracking-wider">Total Paid</span>
           <p className="text-xl font-bold text-green-900 mt-1">Rs. {summary.paid.toLocaleString()}</p>
+          <span className="text-[10px] text-gray-400">Paid out</span>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-medium text-red-600 uppercase">Total Remaining</span>
-          <p className="text-xl font-bold text-red-900 mt-1">Rs. {summary.remaining.toLocaleString()}</p>
+        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
+          <span className="text-xs font-semibold text-yellow-600 uppercase tracking-wider">Total Remaining</span>
+          <p className="text-xl font-bold text-yellow-900 mt-1">Rs. {summary.remaining.toLocaleString()}</p>
+          <span className="text-[10px] text-gray-400">Payable</span>
+        </div>
+        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-red-200">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">Cancelled Orders</span>
+            <span className="px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">
+              {summary.cancelledCount}
+            </span>
+          </div>
+          <p className="text-xl font-bold text-red-700 mt-1">Rs. {summary.cancelledTotal.toLocaleString()}</p>
+          <span className="text-[10px] text-red-400">Excluded from billing</span>
         </div>
       </div>
 

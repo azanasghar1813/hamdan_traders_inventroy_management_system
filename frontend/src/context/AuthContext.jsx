@@ -4,28 +4,48 @@ import api from '../services/api';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkUserLoggedIn = async () => {
+  const [user, setUser] = useState(() => {
+    try {
       const storedUserInfo = localStorage.getItem('userInfo');
       if (storedUserInfo) {
-        const userInfo = JSON.parse(storedUserInfo);
-        api.defaults.headers.common['Authorization'] = `Bearer ${userInfo.token}`;
-        
-        try {
-          const { data } = await api.get('/auth/me');
-          setUser({ ...data.data, token: userInfo.token });
-        } catch (error) {
-          console.error("Token invalid or expired");
-          logout();
+        const parsed = JSON.parse(storedUserInfo);
+        if (parsed?.token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${parsed.token}`;
+          return parsed;
         }
       }
-      setLoading(false);
+    } catch (e) {
+      console.error('Error parsing stored userInfo:', e);
+      localStorage.removeItem('userInfo');
+    }
+    return null;
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const verifyUser = async () => {
+      const storedUserInfo = localStorage.getItem('userInfo');
+      if (storedUserInfo) {
+        try {
+          const parsed = JSON.parse(storedUserInfo);
+          if (parsed?.token) {
+            api.defaults.headers.common['Authorization'] = `Bearer ${parsed.token}`;
+            const { data } = await api.get('/auth/me');
+            setUser({ ...data.data, token: parsed.token });
+          }
+        } catch (error) {
+          if (error.response?.status === 401) {
+            console.error("Session expired or token invalid");
+            logout();
+          } else {
+            console.warn("Could not verify auth with server, keeping cached session:", error.message);
+          }
+        }
+      }
     };
 
-    checkUserLoggedIn();
+    verifyUser();
   }, []);
 
   const login = async (email, password) => {
@@ -57,7 +77,16 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {!loading && children}
+      {loading ? (
+        <div className="flex h-screen items-center justify-center bg-gray-50">
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p className="text-sm font-semibold text-gray-600">Loading Hamdan Traders...</p>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

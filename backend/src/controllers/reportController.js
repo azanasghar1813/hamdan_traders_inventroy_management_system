@@ -31,11 +31,16 @@ const getSalesReport = async (req, res) => {
       .sort({ date: 1 });
 
     const summary = sales.reduce((acc, sale) => {
-      acc.totalSales += sale.grandTotal;
-      acc.totalPaid += sale.paid;
-      acc.totalRemaining += sale.remaining;
+      if (sale.isCancelled) {
+        acc.cancelledCount += 1;
+        acc.cancelledTotal += Number(sale.grandTotal || 0);
+      } else {
+        acc.totalSales += Number(sale.grandTotal || 0);
+        acc.totalPaid += Number(sale.paid || 0);
+        acc.totalRemaining += Number(sale.remaining || 0);
+      }
       return acc;
-    }, { totalSales: 0, totalPaid: 0, totalRemaining: 0 });
+    }, { totalSales: 0, totalPaid: 0, totalRemaining: 0, cancelledCount: 0, cancelledTotal: 0 });
 
     res.json({ success: true, data: { sales, summary } });
   } catch (error) {
@@ -56,11 +61,16 @@ const getPurchaseReport = async (req, res) => {
       .sort({ date: 1 });
 
     const summary = purchases.reduce((acc, pur) => {
-      acc.totalPurchases += pur.grandTotal;
-      acc.totalPaid += pur.paid;
-      acc.totalRemaining += pur.remaining;
+      if (pur.isCancelled) {
+        acc.cancelledCount += 1;
+        acc.cancelledTotal += Number(pur.grandTotal || 0);
+      } else {
+        acc.totalPurchases += Number(pur.grandTotal || 0);
+        acc.totalPaid += Number(pur.paid || 0);
+        acc.totalRemaining += Number(pur.remaining || 0);
+      }
       return acc;
-    }, { totalPurchases: 0, totalPaid: 0, totalRemaining: 0 });
+    }, { totalPurchases: 0, totalPaid: 0, totalRemaining: 0, cancelledCount: 0, cancelledTotal: 0 });
 
     res.json({ success: true, data: { purchases, summary } });
   } catch (error) {
