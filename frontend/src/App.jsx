@@ -3,22 +3,42 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import InstallPWA from './components/InstallPWA';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Code-split routes with React.lazy for ultra-fast initial load times
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const ProductsPage = lazy(() => import('./pages/ProductsPage'));
-const StockPage = lazy(() => import('./pages/StockPage'));
-const CustomersPage = lazy(() => import('./pages/CustomersPage'));
-const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
-const PurchasesPage = lazy(() => import('./pages/PurchasesPage'));
-const NewPurchasePage = lazy(() => import('./pages/NewPurchasePage'));
-const SalesPage = lazy(() => import('./pages/SalesPage'));
-const NewSalePage = lazy(() => import('./pages/NewSalePage'));
-const AlertsPage = lazy(() => import('./pages/AlertsPage'));
-const ReportsPage = lazy(() => import('./pages/ReportsPage'));
-const Invoice = lazy(() => import('./pages/Invoice'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const UsersPage = lazy(() => import('./pages/UsersPage'));
+// Helper to auto-retry dynamic import on fresh deployment if chunk hash changed
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageHasBeenForceRefreshed = sessionStorage.getItem('chunk_force_refreshed');
+
+    try {
+      const component = await componentImport();
+      sessionStorage.removeItem('chunk_force_refreshed');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenForceRefreshed) {
+        sessionStorage.setItem('chunk_force_refreshed', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // prevent execution until reload completes
+      }
+      throw error;
+    }
+  });
+
+// Code-split routes with auto-retry on new deployments
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const ProductsPage = lazyWithRetry(() => import('./pages/ProductsPage'));
+const StockPage = lazyWithRetry(() => import('./pages/StockPage'));
+const CustomersPage = lazyWithRetry(() => import('./pages/CustomersPage'));
+const SuppliersPage = lazyWithRetry(() => import('./pages/SuppliersPage'));
+const PurchasesPage = lazyWithRetry(() => import('./pages/PurchasesPage'));
+const NewPurchasePage = lazyWithRetry(() => import('./pages/NewPurchasePage'));
+const SalesPage = lazyWithRetry(() => import('./pages/SalesPage'));
+const NewSalePage = lazyWithRetry(() => import('./pages/NewSalePage'));
+const AlertsPage = lazyWithRetry(() => import('./pages/AlertsPage'));
+const ReportsPage = lazyWithRetry(() => import('./pages/ReportsPage'));
+const Invoice = lazyWithRetry(() => import('./pages/Invoice'));
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
+const UsersPage = lazyWithRetry(() => import('./pages/UsersPage'));
 
 const PageLoader = () => (
   <div className="flex h-64 items-center justify-center text-sm font-medium text-gray-500">
@@ -39,9 +59,10 @@ function App() {
     <AuthProvider>
       <Router>
         <InstallPWA />
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
 
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
@@ -66,6 +87,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </Router>
     </AuthProvider>
   );
