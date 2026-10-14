@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiBox, FiAlertTriangle, FiDollarSign, FiShoppingCart, FiArrowRight } from 'react-icons/fi';
+import { FiBox, FiDollarSign, FiShoppingCart, FiArrowRight } from 'react-icons/fi';
 
 import api from '../services/api';
 
@@ -73,39 +73,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Summary Cards - Single Horizontal Line on Mobile, Grid on Tablet/Desktop */}
-      <div className="flex overflow-x-auto no-scrollbar gap-3 pb-1 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 snap-x">
-        {/* Card 1: Total Products */}
-        <div className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-blue-500">
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
-            <div className="p-2 sm:p-3 rounded-full bg-blue-100 text-blue-600 shrink-0">
-              <FiBox className="text-base sm:text-xl" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-gray-500 truncate">Total Products</p>
-              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">{summary.totalProducts}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Low Stock Alerts */}
-        <div
-          className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-red-500 cursor-pointer hover:bg-gray-50 transition"
-          onClick={() => (window.location.href = '/alerts')}
-        >
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
-            <div className="p-2 sm:p-3 rounded-full bg-red-100 text-red-600 shrink-0">
-              <FiAlertTriangle className="text-base sm:text-xl" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-gray-500 truncate">Low Stock Alerts</p>
-              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">{summary.lowStockCount}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Today's Sales */}
-        <div className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-green-500">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+        {/* Card 1: Today's Sales */}
+        <div className="bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-green-500">
           <div className="flex items-center gap-2.5 sm:gap-3.5">
             <div className="p-2 sm:p-3 rounded-full bg-green-100 text-green-600 shrink-0">
               <FiDollarSign className="text-base sm:text-xl" />
@@ -119,8 +90,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Card 4: Monthly Sales */}
-        <div className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-purple-500">
+        {/* Card 2: Monthly Sales */}
+        <div className="bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-purple-500">
           <div className="flex items-center gap-2.5 sm:gap-3.5">
             <div className="p-2 sm:p-3 rounded-full bg-purple-100 text-purple-600 shrink-0">
               <FiShoppingCart className="text-base sm:text-xl" />
