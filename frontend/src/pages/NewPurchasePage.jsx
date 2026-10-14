@@ -13,19 +13,24 @@ const NewPurchasePage = () => {
   const [items, setItems] = useState([{ productId: '', quantity: 1, cost: 0, total: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
-
+  const [nextNumberInfo, setNextNumberInfo] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let ignore = false;
     const load = async () => {
       try {
-        const [suppRes, prodRes] = await Promise.all([
+        const [suppRes, prodRes, nextNumRes] = await Promise.all([
           api.get('/suppliers'),
-          api.get('/products')
+          api.get('/products'),
+          api.get('/purchases/next-number').catch(() => ({ data: { data: null } }))
         ]);
         if (!ignore) {
           setSuppliers(suppRes.data.data.filter(s => s.isActive));
           setProducts(prodRes.data.data.filter(p => p.isActive));
+          if (nextNumRes.data?.data) {
+            setNextNumberInfo(nextNumRes.data.data);
+          }
         }
       } catch (err) {
         if (!ignore) console.error(err);
@@ -72,6 +77,7 @@ const NewPurchasePage = () => {
       return alert('Please select or enter a supplier and at least one valid product.');
     }
 
+    setSubmitting(true);
     try {
       let finalSupplierId = supplier.id;
       // If entered manually or no id, find existing by name or create new supplier
@@ -102,13 +108,28 @@ const NewPurchasePage = () => {
       });
       navigate(`/invoice/purchase/${response.data.data._id}`);
     } catch (err) {
+      setSubmitting(false);
       alert(err.response?.data?.message || 'Error creating purchase');
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">New Purchase</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">New Purchase</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Enter stock receipt details to generate purchase invoice</p>
+        </div>
+        {nextNumberInfo && (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm font-semibold shadow-xs">
+            <span className="text-xs uppercase tracking-wider text-blue-600 font-medium">Purchase No:</span>
+            <span className="font-mono text-base">{nextNumberInfo.nextNumber}</span>
+            <span className="text-xs text-blue-600 font-normal">
+              (Order #{nextNumberInfo.orderNumber})
+            </span>
+          </div>
+        )}
+      </div>
       
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
@@ -224,9 +245,20 @@ const NewPurchasePage = () => {
         <div className="mt-8 flex justify-end">
           <button 
             type="submit" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 min-h-[44px] rounded-md font-semibold shadow-sm transition-colors cursor-pointer text-base"
+            disabled={submitting}
+            className={`flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-8 py-3 min-h-[44px] rounded-md font-semibold shadow-sm transition-all text-base ${submitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
           >
-            Save Purchase
+            {submitting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                Creating Purchase Invoice...
+              </>
+            ) : (
+              'Save Purchase'
+            )}
           </button>
         </div>
       </form>

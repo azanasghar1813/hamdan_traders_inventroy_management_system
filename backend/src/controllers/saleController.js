@@ -2,7 +2,7 @@ const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const StockMovement = require('../models/StockMovement');
-const { getNextSequence } = require('../models/Counter');
+const { getNextSequence, peekNextSequence } = require('../models/Counter');
 const { runInTransaction } = require('../utils/transactionHelper');
 
 // @desc    Get all sales
@@ -275,10 +275,24 @@ const addSalePayment = async (req, res) => {
   }
 };
 
+// @desc    Get upcoming next sale invoice number preview
+// @route   GET /api/sales/next-number
+// @access  Private
+const getNextSaleNumber = async (req, res) => {
+  try {
+    const data = await peekNextSequence('sale_invoice', 'INV', 4, Sale, 'invoiceNumber');
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('getNextSaleNumber error:', error);
+    res.status(500).json({ success: false, message: 'Failed to preview next invoice number' });
+  }
+};
+
 module.exports = {
   getSales,
   getSaleById,
   createSale,
   toggleSaleStatus,
-  addSalePayment
+  addSalePayment,
+  getNextSaleNumber
 };

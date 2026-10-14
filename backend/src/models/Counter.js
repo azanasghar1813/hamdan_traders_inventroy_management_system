@@ -126,7 +126,103 @@ const getNextSequence = async (
   return nextFormatted;
 };
 
+/**
+ * Peeks at the upcoming sequence number without advancing the counter.
+ * Useful for UI display (e.g. showing upcoming Order # / Invoice # on the creation form).
+ */
+const peekNextSequence = async (
+  sequenceName,
+  prefix = '',
+  padLength = 4,
+  Model = null,
+  fieldName = null
+) => {
+  let resolvedModel = Model;
+  let resolvedField = fieldName;
+
+  if (!resolvedModel) {
+    if (sequenceName === 'purchase_invoice') {
+      try {
+        resolvedModel = mongoose.model('Purchase');
+      } catch {
+        resolvedModel = require('./Purchase');
+      }
+      resolvedField = 'purchaseNumber';
+    } else if (sequenceName === 'sale_invoice') {
+      try {
+        resolvedModel = mongoose.model('Sale');
+      } catch {
+        resolvedModel = require('./Sale');
+      }
+      resolvedField = 'invoiceNumber';
+    }
+  }
+
+  let currentSeq = 0;
+  const counterDoc = await Counter.findById(sequenceName).lean();
+  if (counterDoc) currentSeq = counterDoc.seq || 0;
+
+  if (resolvedModel && resolvedField) {
+    try {
+      const prefixRegex = prefix ? new RegExp(`^${prefix}-(\\d+)$`) : /^(\d+)$/;
+      const docs = await resolvedModel
+        .find(
+          { [resolvedField]: { $regex: prefix ? `^${prefix}-` : '^\\d+' } },
+          { [resolvedField]: 1 }
+        )
+        .lean();
+
+      let maxExistingNum = 0;
+      for (const doc of docs) {
+        const val = doc[resolvedField];
+        if (val) {
+          const m = String(val).match(prefixRegex);
+          if (m) {
+            const num = parseInt(m[1], 10);
+            if (!isNaN(num) && num > maxExistingNum) {
+              maxExistingNum = num;
+            }
+          }
+        }
+      }
+      if (maxExistingNum > currentSeq) {
+        currentSeq = maxExistingNum;
+      }
+    } catch (e) {
+      console.warn(`peekNextSequence warning for ${sequenceName}:`, e.message);
+    }
+  }
+
+  let candidateNum = currentSeq + 1;
+  let candidateFormatted = '';
+  let candidateExists = true;
+  let attempts = 0;
+
+  while (candidateExists && attempts < 1000) {
+    attempts++;
+    const formattedSeq = candidateNum.toString().padStart(padLength, '0');
+    candidateFormatted = prefix ? `${prefix}-${formattedSeq}` : formattedSeq;
+
+    if (resolvedModel && resolvedField) {
+      const exists = await resolvedModel.exists({ [resolvedField]: candidateFormatted });
+      if (!exists) {
+        candidateExists = false;
+      } else {
+        candidateNum++;
+      }
+    } else {
+      candidateExists = false;
+    }
+  }
+
+  return {
+    nextNumber: candidateFormatted,
+    orderNumber: candidateNum
+  };
+};
+
 module.exports = {
   Counter,
-  getNextSequence
+  getNextSequence,
+  peekNextSequence
 };

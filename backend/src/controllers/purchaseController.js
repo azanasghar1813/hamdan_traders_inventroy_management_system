@@ -2,7 +2,7 @@ const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const StockMovement = require('../models/StockMovement');
-const { getNextSequence } = require('../models/Counter');
+const { getNextSequence, peekNextSequence } = require('../models/Counter');
 const { runInTransaction } = require('../utils/transactionHelper');
 
 // @desc    Get all purchases
@@ -280,10 +280,24 @@ const addPurchasePayment = async (req, res) => {
   }
 };
 
+// @desc    Get upcoming next purchase number preview
+// @route   GET /api/purchases/next-number
+// @access  Private
+const getNextPurchaseNumber = async (req, res) => {
+  try {
+    const data = await peekNextSequence('purchase_invoice', 'PUR', 4, Purchase, 'purchaseNumber');
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('getNextPurchaseNumber error:', error);
+    res.status(500).json({ success: false, message: 'Failed to preview next purchase number' });
+  }
+};
+
 module.exports = {
   getPurchases,
   getPurchaseById,
   createPurchase,
   togglePurchaseStatus,
-  addPurchasePayment
+  addPurchasePayment,
+  getNextPurchaseNumber
 };

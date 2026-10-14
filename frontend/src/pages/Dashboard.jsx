@@ -7,13 +7,24 @@ import api from '../services/api';
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [nextNumbers, setNextNumbers] = useState({ sale: null, purchase: null });
 
   useEffect(() => {
     let ignore = false;
     const loadDashboard = async () => {
       try {
-        const { data } = await api.get('/dashboard');
-        if (!ignore) setStats(data.data);
+        const [dashRes, saleNumRes, purNumRes] = await Promise.all([
+          api.get('/dashboard'),
+          api.get('/sales/next-number').catch(() => ({ data: { data: null } })),
+          api.get('/purchases/next-number').catch(() => ({ data: { data: null } }))
+        ]);
+        if (!ignore) {
+          setStats(dashRes.data.data);
+          setNextNumbers({
+            sale: saleNumRes.data?.data,
+            purchase: purNumRes.data?.data
+          });
+        }
       } catch (err) {
         if (!ignore) console.error(err);
       } finally {
@@ -37,11 +48,27 @@ const Dashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Overview</h1>
         <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-          <Link to="/sales/new" className="flex-1 sm:flex-none text-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm">
-            + New Sale
+          <Link
+            to="/sales/new"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm active:scale-95 transition-all"
+          >
+            <span>+ New Sale</span>
+            {nextNumbers.sale?.nextNumber && (
+              <span className="text-xs bg-blue-700/90 text-blue-100 px-1.5 py-0.5 rounded font-mono">
+                {nextNumbers.sale.nextNumber}
+              </span>
+            )}
           </Link>
-          <Link to="/purchases/new" className="flex-1 sm:flex-none text-center px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-200 shadow-sm">
-            + New Purchase
+          <Link
+            to="/purchases/new"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-200 shadow-sm active:scale-95 transition-all"
+          >
+            <span>+ New Purchase</span>
+            {nextNumbers.purchase?.nextNumber && (
+              <span className="text-xs bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded font-mono">
+                {nextNumbers.purchase.nextNumber}
+              </span>
+            )}
           </Link>
         </div>
       </div>

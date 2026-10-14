@@ -43,6 +43,8 @@ const SalesPage = () => {
 
   const [paymentModalData, setPaymentModalData] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   const fetchSalesAndCustomers = async () => {
     try {
@@ -86,11 +88,14 @@ const SalesPage = () => {
   const handleToggleCancel = async (sale) => {
     const action = sale.isCancelled ? 'restore' : 'cancel';
     if (window.confirm(`Are you sure you want to ${action} Invoice ${sale.invoiceNumber}? This will automatically adjust stock levels and customer balance.`)) {
+      setTogglingId(sale._id);
       try {
         await api.put(`/sales/${sale._id}/toggle-cancel`);
-        fetchSalesAndCustomers();
+        await fetchSalesAndCustomers();
       } catch (err) {
         alert(err.response?.data?.message || `Error trying to ${action} sale`);
+      } finally {
+        setTogglingId(null);
       }
     }
   };
@@ -102,12 +107,15 @@ const SalesPage = () => {
 
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
+    setSubmittingPayment(true);
     try {
       await api.post(`/sales/${paymentModalData._id}/payment`, { amount: paymentAmount });
       setPaymentModalData(null);
-      fetchSalesAndCustomers();
+      await fetchSalesAndCustomers();
     } catch (err) {
       alert(err.response?.data?.message || 'Error processing payment');
+    } finally {
+      setSubmittingPayment(false);
     }
   };
 
@@ -324,9 +332,9 @@ const SalesPage = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="flex flex-col xl:flex-row xl:items-end gap-3">
           {/* Search by Invoice # or Customer */}
-          <div className="relative">
+          <div className="flex-1 min-w-[200px]">
             <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
             <div className="relative">
               <input
@@ -334,14 +342,14 @@ const SalesPage = () => {
                 placeholder="Invoice # or customer name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
               />
               <FiSearch className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
             </div>
           </div>
 
           {/* Customer Filter */}
-          <div>
+          <div className="w-full sm:w-56 xl:w-48 shrink-0">
             <label className="block text-xs font-medium text-gray-600 mb-1">Customer</label>
             <select
               value={selectedCustomerId}
@@ -363,61 +371,65 @@ const SalesPage = () => {
               ))}
             </select>
           </div>
-        </div>
 
-        {/* Date Range & Quick Presets */}
-        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <span className="text-xs font-medium text-gray-600 flex items-center gap-1">
-              <FiCalendar className="text-gray-400" /> Date Range:
-            </span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-2.5 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-            />
-            <span className="text-xs text-gray-400">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-2.5 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-            />
-            {(startDate || endDate) && (
-              <button
-                type="button"
-                onClick={() => handleDatePreset('CLEAR')}
-                className="text-xs text-gray-500 hover:text-gray-700 underline"
-              >
-                Clear Date
-              </button>
-            )}
+          {/* Date Range */}
+          <div className="shrink-0">
+            <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+              <FiCalendar className="text-gray-400" /> Date Range
+            </label>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+              />
+              <span className="text-xs text-gray-400">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
+              />
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  onClick={() => handleDatePreset('CLEAR')}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline ml-0.5"
+                  title="Clear dates"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-gray-400 mr-1">Presets:</span>
-            <button
-              type="button"
-              onClick={() => handleDatePreset('TODAY')}
-              className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDatePreset('WEEK')}
-              className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-            >
-              This Week
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDatePreset('MONTH')}
-              className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-            >
-              This Month
-            </button>
+          {/* Quick Presets */}
+          <div className="shrink-0">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Presets</label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleDatePreset('TODAY')}
+                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDatePreset('WEEK')}
+                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              >
+                This Week
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDatePreset('MONTH')}
+                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              >
+                This Month
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -525,13 +537,13 @@ const SalesPage = () => {
                     Rs. {Number(sale.remaining).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link to={`/invoice/sale/${sale._id}`} className="text-gray-600 hover:text-blue-900 inline-block mr-4" title="View Invoice">
+                    <Link to={`/invoice/sale/${sale._id}`} className="text-gray-600 hover:text-blue-900 active:scale-90 transition-transform inline-block mr-4" title="View Invoice">
                       <FiEye size={18} />
                     </Link>
                     {!sale.isCancelled && Number(sale.remaining) > 0 && (
                       <button 
                         onClick={() => openPaymentModal(sale)}
-                        className="text-green-600 hover:text-green-900 inline-block mr-4"
+                        className="text-green-600 hover:text-green-900 active:scale-90 transition-transform inline-block mr-4"
                         title="Add Payment"
                       >
                         <FiDollarSign size={18} />
@@ -539,10 +551,17 @@ const SalesPage = () => {
                     )}
                     <button 
                       onClick={() => handleToggleCancel(sale)}
-                      className={`${sale.isCancelled ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'} inline-block`}
+                      disabled={togglingId === sale._id}
+                      className={`${sale.isCancelled ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'} active:scale-90 transition-transform inline-block disabled:opacity-50`}
                       title={sale.isCancelled ? "Restore Sale" : "Cancel Sale"}
                     >
-                      {sale.isCancelled ? <FiRefreshCw size={18} /> : <FiXCircle size={18} />}
+                      {togglingId === sale._id ? (
+                        <FiRefreshCw size={18} className="animate-spin" />
+                      ) : sale.isCancelled ? (
+                        <FiRefreshCw size={18} />
+                      ) : (
+                        <FiXCircle size={18} />
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -646,11 +665,18 @@ const SalesPage = () => {
                       e.stopPropagation();
                       handleToggleCancel(s);
                     }}
-                    className={`px-3 py-1.5 rounded font-medium flex items-center gap-1 min-h-[36px] ${
+                    disabled={togglingId === s._id}
+                    className={`px-3 py-1.5 rounded font-medium flex items-center gap-1 min-h-[36px] active:scale-95 transition-all disabled:opacity-50 ${
                       s.isCancelled ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-red-50 text-red-700 hover:bg-red-100'
                     }`}
                   >
-                    {s.isCancelled ? <FiRefreshCw /> : <FiXCircle />}
+                    {togglingId === s._id ? (
+                      <FiRefreshCw className="animate-spin" />
+                    ) : s.isCancelled ? (
+                      <FiRefreshCw />
+                    ) : (
+                      <FiXCircle />
+                    )}
                     {s.isCancelled ? 'Restore' : 'Cancel'}
                   </button>
                 </div>
@@ -700,9 +726,20 @@ const SalesPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm"
+                  disabled={submittingPayment}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:scale-95 transition-all shadow-sm disabled:opacity-75"
                 >
-                  Save Payment
+                  {submittingPayment ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Payment'
+                  )}
                 </button>
               </div>
             </form>
