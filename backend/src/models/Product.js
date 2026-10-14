@@ -16,4 +16,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Index for active/non-deleted product lookups and dashboard counts
+productSchema.index({ isActive: 1, isDeleted: 1 });
+
 module.exports = mongoose.model('Product', productSchema);

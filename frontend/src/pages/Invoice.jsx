@@ -138,7 +138,7 @@ const Invoice = () => {
       <div className="overflow-x-auto w-full pb-6">
         <div
           id="printable-invoice"
-          className="bg-white mx-auto text-black p-5 sm:p-6 rounded-xl shadow-md border border-gray-200 print:border-none print:shadow-none print:p-0 print:rounded-none"
+          className="bg-white mx-auto text-black p-5 sm:p-6 rounded-xl shadow-md border border-gray-200 print:border-none print:shadow-none print:px-3 print:py-2 print:rounded-none print:max-w-[70mm] print:w-[92%]"
           style={{
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             width: '100%',

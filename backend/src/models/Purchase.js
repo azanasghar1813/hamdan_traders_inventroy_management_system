@@ -24,4 +24,9 @@ const purchaseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for fast history, supplier filtering, and dashboard aggregations
+purchaseSchema.index({ supplierId: 1, date: -1 });
+purchaseSchema.index({ isCancelled: 1, date: -1 });
+purchaseSchema.index({ date: -1, isCancelled: 1 });
+
 module.exports = mongoose.model('Purchase', purchaseSchema);

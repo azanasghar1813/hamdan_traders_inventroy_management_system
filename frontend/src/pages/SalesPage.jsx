@@ -12,7 +12,6 @@ import {
   FiRefreshCw, 
   FiDollarSign, 
   FiSearch, 
-  FiFilter, 
   FiArrowUp, 
   FiArrowDown, 
   FiX, 
@@ -197,71 +196,76 @@ const SalesPage = () => {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="flex items-center justify-between w-full sm:w-auto">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Sales History</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Filter, search, and track all customer sales invoices</p>
+      {/* Header & Search Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-3 sm:mb-6 gap-3">
+        {/* Top row on Mobile / Left+Center on Desktop */}
+        <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:flex-1">
+          <div className="shrink-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Sales History</h1>
+            <p className="text-xs text-gray-500 hidden sm:block mt-0.5">Filter, search, and track all customer sales invoices</p>
           </div>
-          <ViewToggle view={view} onChange={setView} />
+
+          {/* Search bar in the center */}
+          <div className="relative flex-1 max-w-[200px] sm:max-w-xs mx-1 sm:mx-4">
+            <input
+              type="text"
+              placeholder="Search invoice or customer..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="w-full pl-8 pr-7 py-1.5 text-xs sm:text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white shadow-xs"
+            />
+            <FiSearch className="absolute left-2.5 top-2.5 text-gray-400 w-3.5 h-3.5" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setPage(1);
+                }}
+                className="absolute right-2 top-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                title="Clear search"
+              >
+                <FiX className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* List and Box icons on Mobile */}
+          <div className="shrink-0">
+            <ViewToggle view={view} onChange={setView} />
+          </div>
         </div>
+
+        {/* New Sale Button (full width on mobile, auto on desktop) */}
         <Link
           to="/sales/new"
-          className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center shadow-sm font-medium transition-colors min-h-[44px]"
+          className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center shadow-sm font-semibold text-sm transition-colors min-h-[40px] shrink-0"
         >
-          <FiPlus className="mr-2" /> New Sale
+          <FiPlus className="mr-1.5" /> New Sale
         </Link>
       </div>
 
-
-      {/* Filter & Sorting Controls */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex items-center justify-between mb-3 border-b pb-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <FiFilter className="text-blue-600" />
-            <span>Filters & Search</span>
-          </div>
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 hover:underline cursor-pointer"
-            >
-              <FiX className="w-3.5 h-3.5" /> Clear All Filters
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-col xl:flex-row xl:items-end gap-3">
-          {/* Search by Invoice # or Customer */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Invoice # or customer name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-              />
-              <FiSearch className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-            </div>
-          </div>
-
+      {/* Single-Line Filters Bar (Customer, Date range, Presets) */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2 sm:p-2.5 mb-5 overflow-x-auto">
+        <div className="flex items-center gap-2 min-w-max">
           {/* Customer Filter */}
-          <div className="w-full sm:w-56 xl:w-48 shrink-0">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Customer</label>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-gray-600 hidden sm:inline">Customer:</span>
             <select
               value={selectedCustomerId}
               onChange={(e) => {
                 setSelectedCustomerId(e.target.value);
+                setPage(1);
                 if (e.target.value) {
                   setSearchParams({ customerId: e.target.value });
                 } else {
                   setSearchParams({});
                 }
               }}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+              className="px-2.5 py-1.5 text-xs font-medium border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[140px] sm:max-w-[180px] truncate"
             >
               <option value="">All Customers</option>
               {customers.map((c) => (
@@ -272,65 +276,76 @@ const SalesPage = () => {
             </select>
           </div>
 
+          <div className="h-4 w-px bg-gray-200 mx-0.5" />
+
           {/* Date Range */}
-          <div className="shrink-0">
-            <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-              <FiCalendar className="text-gray-400" /> Date Range
-            </label>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
-              />
-              <span className="text-xs text-gray-400">to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 bg-white"
-              />
-              {(startDate || endDate) && (
-                <button
-                  type="button"
-                  onClick={() => handleDatePreset('CLEAR')}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline ml-0.5"
-                  title="Clear dates"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+          <div className="flex items-center gap-1">
+            <FiCalendar className="text-gray-400 w-3.5 h-3.5 shrink-0" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+              className="px-1.5 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              title="Start Date"
+            />
+            <span className="text-xs text-gray-400">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+              className="px-1.5 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              title="End Date"
+            />
           </div>
 
-          {/* Quick Presets */}
-          <div className="shrink-0">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Presets</label>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => handleDatePreset('TODAY')}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDatePreset('WEEK')}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-              >
-                This Week
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDatePreset('MONTH')}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-              >
-                This Month
-              </button>
-            </div>
+          <div className="h-4 w-px bg-gray-200 mx-0.5" />
+
+          {/* Presets */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => handleDatePreset('TODAY')}
+              className="px-2 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDatePreset('WEEK')}
+              className="px-2 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Week
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDatePreset('MONTH')}
+              className="px-2 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Month
+            </button>
           </div>
+
+          {/* Clear Active Filters */}
+          {hasActiveFilters && (
+            <>
+              <div className="h-4 w-px bg-gray-200 mx-0.5" />
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors whitespace-nowrap cursor-pointer"
+                title="Clear all filters"
+              >
+                <FiX className="w-3.5 h-3.5" />
+                <span>Clear</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -24,4 +24,9 @@ const saleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for fast history, customer filtering, and dashboard aggregations
+saleSchema.index({ customerId: 1, date: -1 });
+saleSchema.index({ isCancelled: 1, date: -1 });
+saleSchema.index({ date: -1, isCancelled: 1 });
+
 module.exports = mongoose.model('Sale', saleSchema);
