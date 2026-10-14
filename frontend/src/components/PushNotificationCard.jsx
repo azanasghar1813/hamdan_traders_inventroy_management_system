@@ -155,7 +155,10 @@ const PushNotificationCard = ({ compact = false }) => {
               )}
             </div>
             <p className="text-sm text-indigo-200 mt-1 max-w-xl">
-              Get immediate alerts with vibration and sound directly on your mobile device whenever any product's stock drops to or below its minimum threshold during sales.
+              Jab bhi kisi item ka stock kam hoga, aapke mobile par foran sound aur vibration ke sath notification aayegi:
+            </p>
+            <p className="text-xs text-amber-200/90 font-mono mt-1 bg-black/25 px-2.5 py-1 rounded inline-block border border-amber-400/20">
+              🚨 Malai Topping ka stock kam ho gaya hai! Baqi sirf 4 boxes reh gaye hain.
             </p>
           </div>
         </div>

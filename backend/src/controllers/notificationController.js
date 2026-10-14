@@ -97,7 +97,7 @@ const sendTest = async (req, res) => {
   try {
     const result = await sendPushNotification({
       title: '🔔 Test Notification - Hamdan Traders',
-      body: 'Your device is successfully connected to receive real-time low stock alerts!',
+      body: 'Hamdan Traders alerts activate ho chuke hain! Ab stock kam hone par foran notification aayegi.',
       url: '/alerts'
     });
 

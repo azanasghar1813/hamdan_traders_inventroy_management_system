@@ -18,20 +18,21 @@ const checkAndNotifyLowStock = async (productIds) => {
     if (lowStockProducts.length > 0) {
       if (lowStockProducts.length === 1) {
         const p = lowStockProducts[0];
+        const unitLabel = p.unit ? ` ${p.unit}` : '';
         await sendPushNotification({
-          title: `🚨 Low Stock: ${p.name}`,
-          body: `⚠️ ${p.name} stock has fallen to ${p.currentStock} ${p.unit || 'units'} (Min: ${p.minimumStock}). Tap to review.`,
+          title: `🚨 Low Stock Alert: ${p.name}`,
+          body: `${p.name} ka stock kam ho gaya hai! Baqi sirf ${p.currentStock}${unitLabel} reh gaye hain.`,
           url: '/alerts'
         });
       } else {
-        const summary = lowStockProducts
+        const productSummaries = lowStockProducts
           .slice(0, 3)
-          .map(p => `${p.name} (${p.currentStock})`)
+          .map(p => `${p.name} (Baqi: ${p.currentStock}${p.unit ? ' ' + p.unit : ''})`)
           .join(', ');
-        const extra = lowStockProducts.length > 3 ? ` +${lowStockProducts.length - 3} more` : '';
+        const extra = lowStockProducts.length > 3 ? ` aur mazeed ${lowStockProducts.length - 3} items` : '';
         await sendPushNotification({
-          title: `🚨 ${lowStockProducts.length} Products Low in Stock!`,
-          body: `⚠️ ${summary}${extra} are at or below minimum threshold. Tap to review.`,
+          title: `🚨 Low Stock Alert (${lowStockProducts.length} Items)`,
+          body: `${productSummaries}${extra} ka stock kam ho gaya hai! Baraye meharbani check karein.`,
           url: '/alerts'
         });
       }
