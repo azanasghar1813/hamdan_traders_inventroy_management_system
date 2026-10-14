@@ -70,7 +70,7 @@ const SuppliersPage = () => {
       });
     } else {
       setEditingSupplier(null);
-      setFormData({ name: '', phone: '', address: '', openingBalance: 0, isActive: true });
+      setFormData({ name: '', phone: '', address: '', openingBalance: '', isActive: true });
     }
     setIsModalOpen(true);
   };
@@ -396,7 +396,7 @@ const SuppliersPage = () => {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <FiDollarSign className="text-gray-400" />
                     </div>
-                    <input type="number" min="0" value={formData.openingBalance} onChange={e => setFormData({...formData, openingBalance: e.target.value})} className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md" />
+                    <input type="number" min="0" placeholder="0" value={formData.openingBalance} onChange={e => setFormData({...formData, openingBalance: e.target.value})} className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md" />
                   </div>
                 </div>
               )}

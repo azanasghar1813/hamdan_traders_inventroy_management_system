@@ -10,9 +10,9 @@ const NewSalePage = () => {
   const [products, setProducts] = useState([]);
   
   const [customer, setCustomer] = useState({ id: '', name: '', isManual: false });
-  const [items, setItems] = useState([{ productId: '', quantity: 1, price: 0, total: 0 }]);
-  const [discount, setDiscount] = useState(0);
-  const [paid, setPaid] = useState(0);
+  const [items, setItems] = useState([{ productId: '', quantity: '', price: '', total: 0 }]);
+  const [discount, setDiscount] = useState('');
+  const [paid, setPaid] = useState('');
   const [nextNumberInfo, setNextNumberInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -47,10 +47,10 @@ const NewSalePage = () => {
     if (field === 'productId') {
       const product = products.find(p => p._id === value);
       newItems[index].productId = value;
-      newItems[index].price = product ? product.sellingPrice : 0;
+      newItems[index].price = product ? product.salePrice : '';
       newItems[index].total = (Number(newItems[index].quantity) || 0) * (Number(newItems[index].price) || 0);
     } else {
-      newItems[index][field] = value === '' ? '' : Number(value);
+      newItems[index][field] = value;
       const qty = Number(newItems[index].quantity) || 0;
       const prc = Number(newItems[index].price) || 0;
       newItems[index].total = qty * prc;
@@ -59,7 +59,7 @@ const NewSalePage = () => {
   };
 
   const addItem = () => {
-    setItems([...items, { productId: '', quantity: 1, price: 0, total: 0 }]);
+    setItems([...items, { productId: '', quantity: '', price: '', total: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -92,6 +92,11 @@ const NewSalePage = () => {
         }
       }
 
+      const numDiscount = Number(discount) || 0;
+      const numPaid = Number(paid) || 0;
+      const numGrandTotal = Math.max(0, subtotal - numDiscount);
+      const numRemaining = numGrandTotal - numPaid;
+
       const response = await api.post('/sales', {
         customerId: finalCustomerId,
         items: items.map(i => ({
@@ -101,10 +106,10 @@ const NewSalePage = () => {
           total: (Number(i.quantity) || 1) * (Number(i.price) || 0)
         })),
         subtotal,
-        discount,
-        grandTotal,
-        paid,
-        remaining
+        discount: numDiscount,
+        grandTotal: numGrandTotal,
+        paid: numPaid,
+        remaining: numRemaining
       });
       navigate(`/invoice/sale/${response.data.data._id}`);
     } catch (err) {
@@ -187,6 +192,7 @@ const NewSalePage = () => {
                   <input 
                     type="number" min="1" 
                     value={item.quantity} 
+                    placeholder="1"
                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white" 
                   />
@@ -196,6 +202,7 @@ const NewSalePage = () => {
                   <input 
                     type="number" min="0" step="0.01" 
                     value={item.price} 
+                    placeholder="0"
                     onChange={(e) => handleItemChange(index, 'price', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
                   />
@@ -204,7 +211,7 @@ const NewSalePage = () => {
                   <label className="block text-xs font-medium text-gray-700 mb-1">Total (Rs)</label>
                   <input 
                     type="text" disabled 
-                    value={item.total.toFixed(2)} 
+                    value={(Number(item.total) || 0).toFixed(2)} 
                     className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-md text-sm font-medium" 
                   />
                 </div>
@@ -238,7 +245,8 @@ const NewSalePage = () => {
               <input 
                 type="number" min="0" 
                 value={discount} 
-                onChange={(e) => setDiscount(Number(e.target.value))}
+                placeholder="0"
+                onChange={(e) => setDiscount(e.target.value)}
                 className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-right text-base"
               />
             </div>
@@ -254,7 +262,8 @@ const NewSalePage = () => {
               <input 
                 type="number" min="0" 
                 value={paid} 
-                onChange={(e) => setPaid(Number(e.target.value))}
+                placeholder="0"
+                onChange={(e) => setPaid(e.target.value)}
                 className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-right text-base"
               />
             </div>
