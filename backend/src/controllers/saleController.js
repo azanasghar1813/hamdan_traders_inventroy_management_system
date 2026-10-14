@@ -215,10 +215,16 @@ const createSale = async (req, res) => {
     const result = await runInTransaction(async (session) => {
       const opts = session ? { session } : {};
 
-      // 1. Verify all products exist
-      for (const item of validatedItems) {
-        const product = await Product.findById(item.productId).session(session);
-        if (!product) throw new Error(`Product not found: ${item.productId}`);
+      // 1. Verify all products exist in a single batch query
+      const productIds = validatedItems.map(i => i.productId);
+      const existingProducts = await Product.find({ _id: { $in: productIds } })
+        .select('_id')
+        .session(session);
+
+      if (existingProducts.length !== productIds.length) {
+        const foundIds = new Set(existingProducts.map(p => p._id.toString()));
+        const missing = productIds.find(id => !foundIds.has(id.toString()));
+        throw new Error(`Product not found: ${missing}`);
       }
 
       // 2. Generate unique atomic invoice number
@@ -240,29 +246,33 @@ const createSale = async (req, res) => {
 
       await sale.save(opts);
 
-      // 4. Process each item (Decrease stock & log movement)
-      for (const item of validatedItems) {
-        const product = await Product.findById(item.productId).session(session);
-        product.currentStock -= Number(item.quantity);
-        await product.save(opts);
+      // 4. Batch update stock using atomic bulkWrite (1 round-trip)
+      const stockBulkOps = validatedItems.map(item => ({
+        updateOne: {
+          filter: { _id: item.productId },
+          update: { $inc: { currentStock: -Number(item.quantity) } }
+        }
+      }));
+      await Product.bulkWrite(stockBulkOps, opts);
 
-        const movement = new StockMovement({
-          productId: item.productId,
-          type: 'SALE',
-          quantity: -Math.abs(Number(item.quantity)),
-          reason: `Sales Invoice: ${invoiceNumber}`,
-          referenceId: sale._id,
-          date: date || new Date()
-        });
-        await movement.save(opts);
-      }
+      // 5. Batch insert stock movements (1 round-trip)
+      const movementDocs = validatedItems.map(item => ({
+        productId: item.productId,
+        type: 'SALE',
+        quantity: -Math.abs(Number(item.quantity)),
+        reason: `Sales Invoice: ${invoiceNumber}`,
+        referenceId: sale._id,
+        date: date || new Date()
+      }));
+      await StockMovement.insertMany(movementDocs, opts);
 
-      // 5. Update customer balance
-      const customer = await Customer.findById(customerId).session(session);
+      // 6. Update customer balance atomically
+      const customer = await Customer.findByIdAndUpdate(
+        customerId,
+        { $inc: { currentBalance: Number(calculatedRemaining) } },
+        { new: true, ...opts }
+      );
       if (!customer) throw new Error('Customer not found');
-
-      customer.currentBalance += Number(calculatedRemaining);
-      await customer.save(opts);
 
       return sale;
     });

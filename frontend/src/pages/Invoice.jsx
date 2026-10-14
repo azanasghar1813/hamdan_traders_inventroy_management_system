@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { FiPrinter, FiArrowLeft, FiShare2 } from 'react-icons/fi';
 import { format } from 'date-fns';
+import html2canvas from 'html2canvas-pro';
 
 const Invoice = () => {
   const { id } = useParams();
@@ -61,40 +62,69 @@ const Invoice = () => {
     }
 
     try {
-      // Lazy load html2canvas-pro only when user clicks to keep bundle ultra-fast
-      const html2canvas = (await import('html2canvas-pro')).default;
       const canvas = await html2canvas(element, {
-        scale: 2.5,
+        scale: 1.5,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
+        imageTimeout: 1000,
+        removeContainer: true,
       });
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-      const file = new File([blob], `${invoiceNumber}.png`, { type: 'image/png' });
+      if (!blob) throw new Error('Could not generate receipt image blob');
+
+      const fileName = `${invoiceNumber}.png`;
+      const file = new File([blob], fileName, {
+        type: 'image/png',
+        lastModified: Date.now(),
+      });
 
       const triggerDownload = () => {
         const url = URL.createObjectURL(file);
         const link = document.createElement('a');
         link.href = url;
-        link.download = file.name;
+        link.download = fileName;
         link.click();
         URL.revokeObjectURL(url);
       };
 
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      // Check if browser supports sharing files (Mobile devices)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
             files: [file],
             title: `Invoice ${invoiceNumber}`,
-            text: `Hamdan Traders Receipt ${invoiceNumber}`,
           });
+          return;
         } catch (shareErr) {
-          if (shareErr.name !== 'AbortError') {
+          // If user cancelled the share dialog, do not download
+          if (shareErr.name === 'AbortError') {
+            return;
+          }
+          // Some Android devices fail with mixed metadata, retry with files only
+          try {
+            await navigator.share({ files: [file] });
+            return;
+          } catch (retryErr) {
+            if (retryErr.name === 'AbortError') return;
+            triggerDownload();
+          }
+        }
+      } else if (navigator.share) {
+        // Fallback for browsers that support text share only
+        try {
+          await navigator.share({
+            title: `Invoice ${invoiceNumber}`,
+            text: `Invoice ${invoiceNumber} from Hamdan Traders`,
+          });
+        } catch (textShareErr) {
+          if (textShareErr.name !== 'AbortError') {
             triggerDownload();
           }
         }
       } else {
+        // Desktop or browsers without Web Share API
         triggerDownload();
       }
     } catch (error) {

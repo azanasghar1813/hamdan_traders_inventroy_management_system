@@ -215,10 +215,16 @@ const createPurchase = async (req, res) => {
     const result = await runInTransaction(async (session) => {
       const opts = session ? { session } : {};
 
-      // 1. Verify all products exist
-      for (const item of validatedItems) {
-        const product = await Product.findById(item.productId).session(session);
-        if (!product) throw new Error(`Product not found: ${item.productId}`);
+      // 1. Verify all products exist in a single batch query
+      const productIds = validatedItems.map(i => i.productId);
+      const existingProducts = await Product.find({ _id: { $in: productIds } })
+        .select('_id')
+        .session(session);
+
+      if (existingProducts.length !== productIds.length) {
+        const foundIds = new Set(existingProducts.map(p => p._id.toString()));
+        const missing = productIds.find(id => !foundIds.has(id.toString()));
+        throw new Error(`Product not found: ${missing}`);
       }
 
       // 2. Generate unique atomic purchase number
@@ -240,30 +246,36 @@ const createPurchase = async (req, res) => {
 
       await purchase.save(opts);
 
-      // 4. Increase product stock & update purchase price
-      for (const item of validatedItems) {
-        const product = await Product.findById(item.productId).session(session);
-        product.currentStock += Number(item.quantity);
-        product.purchasePrice = Number(item.cost);
-        await product.save(opts);
+      // 4. Batch update stock & purchasePrice using atomic bulkWrite (1 round-trip)
+      const stockBulkOps = validatedItems.map(item => ({
+        updateOne: {
+          filter: { _id: item.productId },
+          update: {
+            $inc: { currentStock: Number(item.quantity) },
+            $set: { purchasePrice: Number(item.cost) }
+          }
+        }
+      }));
+      await Product.bulkWrite(stockBulkOps, opts);
 
-        const movement = new StockMovement({
-          productId: item.productId,
-          type: 'PURCHASE',
-          quantity: Number(item.quantity),
-          reason: `Purchase Invoice: ${purchaseNumber}`,
-          referenceId: purchase._id,
-          date: date || new Date()
-        });
-        await movement.save(opts);
-      }
+      // 5. Batch insert stock movements (1 round-trip)
+      const movementDocs = validatedItems.map(item => ({
+        productId: item.productId,
+        type: 'PURCHASE',
+        quantity: Number(item.quantity),
+        reason: `Purchase Invoice: ${purchaseNumber}`,
+        referenceId: purchase._id,
+        date: date || new Date()
+      }));
+      await StockMovement.insertMany(movementDocs, opts);
 
-      // 5. Update supplier balance
-      const supplier = await Supplier.findById(supplierId).session(session);
+      // 6. Update supplier balance atomically
+      const supplier = await Supplier.findByIdAndUpdate(
+        supplierId,
+        { $inc: { currentBalance: Number(calculatedRemaining) } },
+        { new: true, ...opts }
+      );
       if (!supplier) throw new Error('Supplier not found');
-
-      supplier.currentBalance += Number(calculatedRemaining);
-      await supplier.save(opts);
 
       return purchase;
     });
