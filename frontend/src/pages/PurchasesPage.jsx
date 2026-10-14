@@ -699,7 +699,16 @@ const PurchasesPage = () => {
                 <p className="text-sm text-gray-600 mb-1">Supplier: <span className="font-semibold">{paymentModalData.supplierId?.name}</span></p>
                 <p className="text-sm text-red-600 mb-4">Remaining Balance: <span className="font-bold">Rs. {Number(paymentModalData.remaining).toLocaleString()}</span></p>
 
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount (Rs.) *</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Payment Amount (Rs.) *</label>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentAmount(String(paymentModalData.remaining))}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+                  >
+                    Pay Full (Rs. {Number(paymentModalData.remaining).toLocaleString()})
+                  </button>
+                </div>
                 <input 
                   type="number" 
                   required 
@@ -712,31 +721,53 @@ const PurchasesPage = () => {
                 />
               </div>
               
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex flex-col-reverse sm:flex-row justify-between gap-2.5 mt-6 pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setPaymentModalData(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={submittingPayment}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:scale-95 transition-all shadow-sm disabled:opacity-75"
-                >
-                  {submittingPayment ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                      </svg>
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Payment'
-                  )}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={submittingPayment}
+                    onClick={async () => {
+                      setSubmittingPayment(true);
+                      try {
+                        await api.post(`/purchases/${paymentModalData._id}/payment`, { amount: paymentModalData.remaining });
+                        setPaymentModalData(null);
+                        setRefreshTrigger((prev) => prev + 1);
+                      } catch (err) {
+                        alert(err.response?.data?.message || 'Error processing payment');
+                      } finally {
+                        setSubmittingPayment(false);
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-green-600 hover:bg-green-700 active:scale-95 text-white rounded-md text-sm font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-75"
+                    title="Mark entire remaining balance as paid"
+                  >
+                    ✓ Mark as Paid
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingPayment || !paymentAmount}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:scale-95 transition-all text-sm font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    {submittingPayment ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Payment'
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
