@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { FiTrash2, FiArrowLeft } from 'react-icons/fi';
 import SelectOrTypeInput from '../components/SelectOrTypeInput';
 
 const NewPurchasePage = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = Boolean(id);
+
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   
@@ -15,32 +18,59 @@ const NewPurchasePage = () => {
   const [paid, setPaid] = useState('');
   const [nextNumberInfo, setNextNumberInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(isEditing);
 
   useEffect(() => {
     let ignore = false;
     const load = async () => {
       try {
-        const [suppRes, prodRes, nextNumRes] = await Promise.all([
+        const fetchPromises = [
           api.get('/suppliers'),
-          api.get('/products'),
-          api.get('/purchases/next-number').catch(() => ({ data: { data: null } }))
-        ]);
+          api.get('/products')
+        ];
+        if (!isEditing) {
+          fetchPromises.push(api.get('/purchases/next-number').catch(() => ({ data: { data: null } })));
+        } else {
+          fetchPromises.push(api.get(`/purchases/${id}`).catch(() => ({ data: { data: null } })));
+        }
+
+        const [suppRes, prodRes, extraRes] = await Promise.all(fetchPromises);
         if (!ignore) {
           setSuppliers(suppRes.data.data.filter(s => s.isActive));
           setProducts(prodRes.data.data.filter(p => p.isActive));
-          if (nextNumRes.data?.data) {
-            setNextNumberInfo(nextNumRes.data.data);
+
+          if (!isEditing && extraRes.data?.data) {
+            setNextNumberInfo(extraRes.data.data);
+          } else if (isEditing && extraRes.data?.data) {
+            const purData = extraRes.data.data;
+            const isGeneral = !purData.supplierId || purData.supplierId.name === 'General Supplier';
+            setSupplier({
+              id: isGeneral ? '' : (purData.supplierId?._id || ''),
+              name: isGeneral ? '' : (purData.supplierId?.name || ''),
+              isManual: false
+            });
+            setItems(purData.items.map(item => ({
+              productId: item.productId?._id || item.productId,
+              quantity: item.quantity,
+              cost: item.cost,
+              total: item.total || (item.quantity * item.cost)
+            })));
+            setDiscount(purData.discount ? String(purData.discount) : '');
+            setPaid(purData.paid ? String(purData.paid) : '');
+            setNextNumberInfo({ nextNumber: purData.purchaseNumber, orderNumber: 'Edit' });
           }
         }
       } catch (err) {
         if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoadingEdit(false);
       }
     };
     load();
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [id, isEditing]);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
@@ -73,15 +103,15 @@ const NewPurchasePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if ((!supplier.id && !supplier.name) || items.length === 0 || items.some(i => !i.productId)) {
-      return alert('Please select or enter a supplier and at least one valid product.');
+    if (items.length === 0 || items.some(i => !i.productId)) {
+      return alert('Please select at least one valid product.');
     }
 
     setSubmitting(true);
     try {
-      let finalSupplierId = supplier.id;
+      let finalSupplierId = supplier.id || null;
       // If entered manually or no id, find existing by name or create new supplier
-      if (!finalSupplierId && supplier.name) {
+      if (!finalSupplierId && supplier.name && supplier.name.trim()) {
         const trimmedName = supplier.name.trim();
         const existing = suppliers.find(s => s.name.toLowerCase() === trimmedName.toLowerCase());
         if (existing) {
@@ -97,7 +127,7 @@ const NewPurchasePage = () => {
       const numGrandTotal = Math.max(0, subtotal - numDiscount);
       const numRemaining = numGrandTotal - numPaid;
 
-      const response = await api.post('/purchases', {
+      const payload = {
         supplierId: finalSupplierId,
         items: items.map(i => ({
           productId: i.productId,
@@ -110,11 +140,19 @@ const NewPurchasePage = () => {
         grandTotal: numGrandTotal,
         paid: numPaid,
         remaining: numRemaining
-      });
+      };
+
+      let response;
+      if (isEditing) {
+        response = await api.put(`/purchases/${id}`, payload);
+      } else {
+        response = await api.post('/purchases', payload);
+      }
+
       navigate(`/invoice/purchase/${response.data.data._id}`);
     } catch (err) {
       setSubmitting(false);
-      alert(err.response?.data?.message || 'Error creating purchase');
+      alert(err.response?.data?.message || `Error ${isEditing ? 'updating' : 'creating'} purchase`);
     }
   };
 
@@ -125,6 +163,10 @@ const NewPurchasePage = () => {
       navigate('/purchases');
     }
   };
+
+  if (loadingEdit) {
+    return <div className="text-center py-10 font-medium text-gray-500">Loading purchase details for editing...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -140,8 +182,8 @@ const NewPurchasePage = () => {
             <FiArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">New Purchase</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Enter stock receipt details to generate purchase invoice</p>
+            <h1 className="text-2xl font-bold text-gray-800">{isEditing ? 'Edit Purchase Invoice' : 'New Purchase'}</h1>
+            <p className="text-xs text-gray-500 mt-0.5">{isEditing ? 'Modify items, quantities, or costs' : 'Enter stock receipt details to generate purchase invoice'}</p>
           </div>
         </div>
         {nextNumberInfo && (
@@ -158,12 +200,11 @@ const NewPurchasePage = () => {
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
           <SelectOrTypeInput
-            label="Select Supplier"
+            label="Select Supplier (Optional)"
             entityName="Supplier"
             items={suppliers}
             value={supplier}
             onChange={setSupplier}
-            required
           />
         </div>
 
@@ -179,7 +220,11 @@ const NewPurchasePage = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
                   <option value="">Select Product</option>
-                  {products.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                  {products.map(p => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.currentStock} in stock)
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="w-full md:w-24">
@@ -282,10 +327,10 @@ const NewPurchasePage = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
-                Creating Purchase Invoice...
+                {isEditing ? 'Updating Purchase Invoice...' : 'Creating Purchase Invoice...'}
               </>
             ) : (
-              'Save Purchase'
+              isEditing ? 'Update Purchase Invoice' : 'Save Purchase'
             )}
           </button>
         </div>

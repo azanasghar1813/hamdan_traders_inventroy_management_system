@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getSales, getSaleById, createSale, toggleSaleStatus, addSalePayment, getNextSaleNumber } = require('../controllers/saleController');
+const { getSales, getSaleById, createSale, updateSale, toggleSaleStatus, addSalePayment, getNextSaleNumber } = require('../controllers/saleController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -10,7 +10,8 @@ router.route('/')
 router.get('/next-number', protect, getNextSaleNumber);
 
 router.route('/:id')
-  .get(protect, getSaleById);
+  .get(protect, getSaleById)
+  .put(protect, updateSale);
 
 router.route('/:id/toggle-cancel')
   .put(protect, toggleSaleStatus);

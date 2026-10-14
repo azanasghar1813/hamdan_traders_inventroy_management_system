@@ -8,6 +8,7 @@ import MobileCardView from '../components/MobileCardView';
 import { 
   FiPlus, 
   FiEye, 
+  FiEdit2,
   FiXCircle, 
   FiRefreshCw, 
   FiDollarSign, 
@@ -455,13 +456,18 @@ const PurchasesPage = () => {
                     Rs. {Number(purchase.remaining).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link to={`/invoice/purchase/${purchase._id}`} className="text-gray-600 hover:text-blue-900 active:scale-90 transition-transform inline-block mr-4" title="View Invoice">
+                    <Link to={`/invoice/purchase/${purchase._id}`} className="text-gray-600 hover:text-blue-900 active:scale-90 transition-transform inline-block mr-3" title="View Invoice">
                       <FiEye size={18} />
                     </Link>
+                    {!purchase.isCancelled && (
+                      <Link to={`/purchases/edit/${purchase._id}`} className="text-amber-600 hover:text-amber-800 active:scale-90 transition-transform inline-block mr-3" title="Edit Purchase">
+                        <FiEdit2 size={17} />
+                      </Link>
+                    )}
                     {!purchase.isCancelled && Number(purchase.remaining) > 0 && (
                       <button 
                         onClick={() => openPaymentModal(purchase)}
-                        className="text-green-600 hover:text-green-900 active:scale-90 transition-transform inline-block mr-4"
+                        className="text-green-600 hover:text-green-900 active:scale-90 transition-transform inline-block mr-3"
                         title="Add Payment"
                       >
                         <FiDollarSign size={18} />
@@ -563,8 +569,16 @@ const PurchasesPage = () => {
                     to={`/invoice/purchase/${p._id}`}
                     className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium flex items-center gap-1 min-h-[36px]"
                   >
-                    <FiEye /> View Invoice
+                    <FiEye /> View
                   </Link>
+                  {!p.isCancelled && (
+                    <Link
+                      to={`/purchases/edit/${p._id}`}
+                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded font-medium flex items-center gap-1 min-h-[36px]"
+                    >
+                      <FiEdit2 /> Edit
+                    </Link>
+                  )}
                   {!p.isCancelled && Number(p.remaining) > 0 && (
                     <button
                       type="button"

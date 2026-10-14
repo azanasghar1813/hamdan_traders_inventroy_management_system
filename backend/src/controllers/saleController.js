@@ -179,8 +179,13 @@ const createSale = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No sale items provided' });
     }
 
-    if (!customerId) {
-      return res.status(400).json({ success: false, message: 'Customer ID is required' });
+    let resolvedCustomerId = customerId;
+    if (!resolvedCustomerId) {
+      let walkInCust = await Customer.findOne({ name: 'Walk-in' });
+      if (!walkInCust) {
+        walkInCust = await Customer.create({ name: 'Walk-in', phone: '', address: '' });
+      }
+      resolvedCustomerId = walkInCust._id;
     }
 
     // Server-side Financial Calculations
@@ -233,7 +238,7 @@ const createSale = async (req, res) => {
       // 3. Create Sale Document
       const sale = new Sale({
         invoiceNumber,
-        customerId,
+        customerId: resolvedCustomerId,
         items: validatedItems,
         subtotal: calculatedSubtotal,
         discount: validatedDiscount,
@@ -268,7 +273,7 @@ const createSale = async (req, res) => {
 
       // 6. Update customer balance atomically
       const customer = await Customer.findByIdAndUpdate(
-        customerId,
+        resolvedCustomerId,
         { $inc: { currentBalance: Number(calculatedRemaining) } },
         { new: true, ...opts }
       );
@@ -281,6 +286,145 @@ const createSale = async (req, res) => {
   } catch (error) {
     console.error('createSale error:', error);
     res.status(400).json({ success: false, message: error.message || 'Failed to create sale' });
+  }
+};
+
+// @desc    Update an existing sale order
+// @route   PUT /api/sales/:id
+// @access  Private
+const updateSale = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { customerId, items, discount = 0, paid = 0, date } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No sale items provided' });
+    }
+
+    let resolvedCustomerId = customerId;
+    if (!resolvedCustomerId) {
+      let walkInCust = await Customer.findOne({ name: 'Walk-in' });
+      if (!walkInCust) {
+        walkInCust = await Customer.create({ name: 'Walk-in', phone: '', address: '' });
+      }
+      resolvedCustomerId = walkInCust._id;
+    }
+
+    // Financial calculations
+    let calculatedSubtotal = 0;
+    const validatedItems = items.map(item => {
+      const parsedQty = Number(item.quantity);
+      const quantity = Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty;
+      const rawPrice = item.price !== undefined ? item.price : item.unitPrice;
+      const parsedPrice = Number(rawPrice);
+      const price = Number.isNaN(parsedPrice) ? 0 : Math.max(0, parsedPrice);
+      const total = quantity * price;
+      calculatedSubtotal += total;
+
+      return {
+        productId: item.productId,
+        quantity,
+        price,
+        total
+      };
+    });
+
+    const validatedDiscount = Math.max(0, Number(discount) || 0);
+    const validatedPaid = Math.max(0, Number(paid) || 0);
+    const calculatedGrandTotal = Math.max(0, calculatedSubtotal - validatedDiscount);
+    const calculatedRemaining = Math.max(0, calculatedGrandTotal - validatedPaid);
+
+    let status = 'UNPAID';
+    if (validatedPaid >= calculatedGrandTotal && calculatedGrandTotal > 0) status = 'PAID';
+    else if (validatedPaid > 0) status = 'PARTIAL';
+    else if (calculatedGrandTotal === 0) status = 'PAID';
+
+    const result = await runInTransaction(async (session) => {
+      const opts = session ? { session } : {};
+
+      const oldSale = await Sale.findById(id).session(session);
+      if (!oldSale) throw new Error('Sale not found');
+      if (oldSale.isCancelled) throw new Error('Cancelled sales cannot be edited');
+
+      // 1. Revert previous stock changes if sale was active
+      for (const item of oldSale.items) {
+        await Product.findByIdAndUpdate(
+          item.productId,
+          { $inc: { currentStock: Number(item.quantity) } },
+          opts
+        );
+      }
+
+      // 2. Revert previous customer remaining balance
+      if (oldSale.customerId) {
+        await Customer.findByIdAndUpdate(
+          oldSale.customerId,
+          { $inc: { currentBalance: -Number(oldSale.remaining) } },
+          opts
+        );
+      }
+
+      // 3. Remove old stock movement logs for this invoice
+      await StockMovement.deleteMany({ referenceId: oldSale._id }, opts);
+
+      // 4. Verify all new products exist
+      const productIds = validatedItems.map(i => i.productId);
+      const existingProducts = await Product.find({ _id: { $in: productIds } })
+        .select('_id')
+        .session(session);
+
+      if (existingProducts.length !== productIds.length) {
+        const foundIds = new Set(existingProducts.map(p => p._id.toString()));
+        const missing = productIds.find(pid => !foundIds.has(pid.toString()));
+        throw new Error(`Product not found: ${missing}`);
+      }
+
+      // 5. Apply new stock decrements
+      const stockBulkOps = validatedItems.map(item => ({
+        updateOne: {
+          filter: { _id: item.productId },
+          update: { $inc: { currentStock: -Number(item.quantity) } }
+        }
+      }));
+      await Product.bulkWrite(stockBulkOps, opts);
+
+      // 6. Record new stock movements
+      const movementDocs = validatedItems.map(item => ({
+        productId: item.productId,
+        type: 'SALE',
+        quantity: -Math.abs(Number(item.quantity)),
+        reason: `Sales Invoice (Edited): ${oldSale.invoiceNumber}`,
+        referenceId: oldSale._id,
+        date: date || oldSale.date
+      }));
+      await StockMovement.insertMany(movementDocs, opts);
+
+      // 7. Update new customer balance
+      await Customer.findByIdAndUpdate(
+        resolvedCustomerId,
+        { $inc: { currentBalance: Number(calculatedRemaining) } },
+        opts
+      );
+
+      // 8. Update Sale document
+      oldSale.customerId = resolvedCustomerId;
+      oldSale.items = validatedItems;
+      oldSale.subtotal = calculatedSubtotal;
+      oldSale.discount = validatedDiscount;
+      oldSale.grandTotal = calculatedGrandTotal;
+      oldSale.paid = validatedPaid;
+      oldSale.remaining = calculatedRemaining;
+      if (date) oldSale.date = date;
+      oldSale.status = status;
+
+      await oldSale.save(opts);
+      return oldSale;
+    });
+
+    res.json({ success: true, data: result, message: 'Sale updated successfully' });
+  } catch (error) {
+    console.error('updateSale error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to update sale' });
   }
 };
 
@@ -429,6 +573,7 @@ module.exports = {
   getSales,
   getSaleById,
   createSale,
+  updateSale,
   toggleSaleStatus,
   addSalePayment,
   getNextSaleNumber

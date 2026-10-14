@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { FiTrash2, FiArrowLeft } from 'react-icons/fi';
 import SelectOrTypeInput from '../components/SelectOrTypeInput';
 
 const NewSalePage = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = Boolean(id);
+
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   
@@ -15,32 +18,59 @@ const NewSalePage = () => {
   const [paid, setPaid] = useState('');
   const [nextNumberInfo, setNextNumberInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(isEditing);
 
   useEffect(() => {
     let ignore = false;
     const load = async () => {
       try {
-        const [custRes, prodRes, nextNumRes] = await Promise.all([
+        const fetchPromises = [
           api.get('/customers'),
-          api.get('/products'),
-          api.get('/sales/next-number').catch(() => ({ data: { data: null } }))
-        ]);
+          api.get('/products')
+        ];
+        if (!isEditing) {
+          fetchPromises.push(api.get('/sales/next-number').catch(() => ({ data: { data: null } })));
+        } else {
+          fetchPromises.push(api.get(`/sales/${id}`).catch(() => ({ data: { data: null } })));
+        }
+
+        const [custRes, prodRes, extraRes] = await Promise.all(fetchPromises);
         if (!ignore) {
           setCustomers(custRes.data.data.filter(c => c.isActive));
           setProducts(prodRes.data.data.filter(p => p.isActive));
-          if (nextNumRes.data?.data) {
-            setNextNumberInfo(nextNumRes.data.data);
+
+          if (!isEditing && extraRes.data?.data) {
+            setNextNumberInfo(extraRes.data.data);
+          } else if (isEditing && extraRes.data?.data) {
+            const saleData = extraRes.data.data;
+            const isWalkIn = !saleData.customerId || saleData.customerId.name === 'Walk-in';
+            setCustomer({
+              id: isWalkIn ? '' : (saleData.customerId?._id || ''),
+              name: isWalkIn ? '' : (saleData.customerId?.name || ''),
+              isManual: false
+            });
+            setItems(saleData.items.map(item => ({
+              productId: item.productId?._id || item.productId,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.total || (item.quantity * item.price)
+            })));
+            setDiscount(saleData.discount ? String(saleData.discount) : '');
+            setPaid(saleData.paid ? String(saleData.paid) : '');
+            setNextNumberInfo({ nextNumber: saleData.invoiceNumber, orderNumber: 'Edit' });
           }
         }
       } catch (err) {
         if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoadingEdit(false);
       }
     };
     load();
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [id, isEditing]);
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
@@ -73,15 +103,15 @@ const NewSalePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if ((!customer.id && !customer.name) || items.length === 0 || items.some(i => !i.productId)) {
-      return alert('Please select or enter a customer and at least one valid product.');
+    if (items.length === 0 || items.some(i => !i.productId)) {
+      return alert('Please select at least one valid product.');
     }
 
     setSubmitting(true);
     try {
-      let finalCustomerId = customer.id;
+      let finalCustomerId = customer.id || null;
       // If entered manually or no id, find existing by name or create new customer
-      if (!finalCustomerId && customer.name) {
+      if (!finalCustomerId && customer.name && customer.name.trim()) {
         const trimmedName = customer.name.trim();
         const existing = customers.find(c => c.name.toLowerCase() === trimmedName.toLowerCase());
         if (existing) {
@@ -97,7 +127,7 @@ const NewSalePage = () => {
       const numGrandTotal = Math.max(0, subtotal - numDiscount);
       const numRemaining = numGrandTotal - numPaid;
 
-      const response = await api.post('/sales', {
+      const payload = {
         customerId: finalCustomerId,
         items: items.map(i => ({
           productId: i.productId,
@@ -110,11 +140,19 @@ const NewSalePage = () => {
         grandTotal: numGrandTotal,
         paid: numPaid,
         remaining: numRemaining
-      });
+      };
+
+      let response;
+      if (isEditing) {
+        response = await api.put(`/sales/${id}`, payload);
+      } else {
+        response = await api.post('/sales', payload);
+      }
+
       navigate(`/invoice/sale/${response.data.data._id}`);
     } catch (err) {
       setSubmitting(false);
-      alert(err.response?.data?.message || 'Error creating sale');
+      alert(err.response?.data?.message || `Error ${isEditing ? 'updating' : 'creating'} sale`);
     }
   };
 
@@ -125,6 +163,10 @@ const NewSalePage = () => {
       navigate('/sales');
     }
   };
+
+  if (loadingEdit) {
+    return <div className="text-center py-10 font-medium text-gray-500">Loading sale details for editing...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -140,8 +182,8 @@ const NewSalePage = () => {
             <FiArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">New Sale Invoice</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Enter sale details to generate invoice</p>
+            <h1 className="text-2xl font-bold text-gray-800">{isEditing ? 'Edit Sale Invoice' : 'New Sale Invoice'}</h1>
+            <p className="text-xs text-gray-500 mt-0.5">{isEditing ? 'Modify items, prices, or quantities' : 'Enter sale details to generate invoice'}</p>
           </div>
         </div>
         {nextNumberInfo && (
@@ -158,12 +200,11 @@ const NewSalePage = () => {
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="mb-6">
           <SelectOrTypeInput
-            label="Select Customer"
+            label="Select Customer (Optional)"
             entityName="Customer"
             items={customers}
             value={customer}
             onChange={setCustomer}
-            required
           />
         </div>
 
@@ -288,10 +329,10 @@ const NewSalePage = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
-                Creating Sale Invoice...
+                {isEditing ? 'Updating Sale Invoice...' : 'Creating Sale Invoice...'}
               </>
             ) : (
-              'Complete Sale'
+              isEditing ? 'Update Sale Invoice' : 'Complete Sale'
             )}
           </button>
         </div>

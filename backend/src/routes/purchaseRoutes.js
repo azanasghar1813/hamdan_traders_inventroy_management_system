@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPurchases, getPurchaseById, createPurchase, togglePurchaseStatus, addPurchasePayment, getNextPurchaseNumber } = require('../controllers/purchaseController');
+const { getPurchases, getPurchaseById, createPurchase, updatePurchase, togglePurchaseStatus, addPurchasePayment, getNextPurchaseNumber } = require('../controllers/purchaseController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -10,7 +10,8 @@ router.route('/')
 router.get('/next-number', protect, getNextPurchaseNumber);
 
 router.route('/:id')
-  .get(protect, getPurchaseById);
+  .get(protect, getPurchaseById)
+  .put(protect, updatePurchase);
 
 router.route('/:id/toggle-cancel')
   .put(protect, togglePurchaseStatus);

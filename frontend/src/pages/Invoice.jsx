@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { FiPrinter, FiArrowLeft, FiShare2 } from 'react-icons/fi';
+import { FiPrinter, FiArrowLeft, FiShare2, FiEdit2 } from 'react-icons/fi';
 import { format } from 'date-fns';
 import html2canvas from 'html2canvas-pro';
 
@@ -46,7 +46,15 @@ const Invoice = () => {
   if (loading) return <div className="text-center py-10 font-medium text-gray-600">Loading invoice...</div>;
   if (!data) return <div className="text-center py-10 text-red-500 font-semibold">Invoice not found.</div>;
 
-  const partyName = isSale ? data.customerId?.name : data.supplierId?.name;
+  const rawPartyName = isSale ? data.customerId?.name : data.supplierId?.name;
+  const isGenericParty = !rawPartyName || 
+    rawPartyName.trim().toLowerCase() === 'walk-in' || 
+    rawPartyName.trim().toLowerCase() === 'cash / walk-in' || 
+    rawPartyName.trim().toLowerCase() === 'general supplier' || 
+    rawPartyName.trim().toLowerCase() === 'unnamed customer' ||
+    rawPartyName.trim().toLowerCase() === 'unnamed supplier';
+
+  const partyName = isGenericParty ? null : rawPartyName;
   const partyPhone = isSale ? data.customerId?.phone : data.supplierId?.phone;
   const partyAddress = isSale ? data.customerId?.address : data.supplierId?.address;
   const invoiceNumber = isSale ? data.invoiceNumber : data.purchaseNumber;
@@ -146,6 +154,16 @@ const Invoice = () => {
           <FiArrowLeft className="mr-1.5" /> Back
         </button>
         <div className="flex items-center gap-2">
+          {!data.isCancelled && (
+            <button
+              onClick={() => navigate(isSale ? `/sales/edit/${data._id}` : `/purchases/edit/${data._id}`)}
+              disabled={isSharing}
+              className="flex px-3.5 py-1.5 bg-amber-600 text-white rounded-md shadow-sm hover:bg-amber-700 items-center text-sm font-medium disabled:opacity-50 transition-all cursor-pointer"
+              title="Edit this invoice"
+            >
+              <FiEdit2 className="mr-1.5" /> Edit
+            </button>
+          )}
           <button
             onClick={handleShare}
             disabled={isSharing}
@@ -206,23 +224,26 @@ const Invoice = () => {
               <span>{format(new Date(data.date), 'hh:mm a')}</span>
             </div>
 
-            <div className="border-t border-dashed border-black my-2.5" />
-
-            <div className="grid grid-cols-[85px_1fr] items-start">
-              <span className="font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
-              <span className="leading-tight break-words">{partyName || 'Cash / Walk-in'}</span>
-            </div>
-            {partyPhone && (
-              <div className="grid grid-cols-[85px_1fr] items-baseline">
-                <span className="font-bold">Phone:</span>
-                <span>{partyPhone}</span>
-              </div>
-            )}
-            {partyAddress && (
-              <div className="grid grid-cols-[85px_1fr] items-start">
-                <span className="font-bold">Address:</span>
-                <span className="text-[11px] leading-tight break-words">{partyAddress}</span>
-              </div>
+            {partyName && (
+              <>
+                <div className="border-t border-dashed border-black my-2.5" />
+                <div className="grid grid-cols-[85px_1fr] items-start">
+                  <span className="font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
+                  <span className="leading-tight break-words">{partyName}</span>
+                </div>
+                {partyPhone && (
+                  <div className="grid grid-cols-[85px_1fr] items-baseline">
+                    <span className="font-bold">Phone:</span>
+                    <span>{partyPhone}</span>
+                  </div>
+                )}
+                {partyAddress && (
+                  <div className="grid grid-cols-[85px_1fr] items-start">
+                    <span className="font-bold">Address:</span>
+                    <span className="text-[11px] leading-tight break-words">{partyAddress}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

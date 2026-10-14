@@ -179,8 +179,13 @@ const createPurchase = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No purchase items provided' });
     }
 
-    if (!supplierId) {
-      return res.status(400).json({ success: false, message: 'Supplier ID is required' });
+    let resolvedSupplierId = supplierId;
+    if (!resolvedSupplierId) {
+      let defaultSupp = await Supplier.findOne({ name: 'General Supplier' });
+      if (!defaultSupp) {
+        defaultSupp = await Supplier.create({ name: 'General Supplier', phone: '', address: '' });
+      }
+      resolvedSupplierId = defaultSupp._id;
     }
 
     // Server-side Financial Calculations
@@ -233,7 +238,7 @@ const createPurchase = async (req, res) => {
       // 3. Create Purchase Document
       const purchase = new Purchase({
         purchaseNumber,
-        supplierId,
+        supplierId: resolvedSupplierId,
         items: validatedItems,
         subtotal: calculatedSubtotal,
         discount: validatedDiscount,
@@ -271,7 +276,7 @@ const createPurchase = async (req, res) => {
 
       // 6. Update supplier balance atomically
       const supplier = await Supplier.findByIdAndUpdate(
-        supplierId,
+        resolvedSupplierId,
         { $inc: { currentBalance: Number(calculatedRemaining) } },
         { new: true, ...opts }
       );
@@ -284,6 +289,148 @@ const createPurchase = async (req, res) => {
   } catch (error) {
     console.error('createPurchase error:', error);
     res.status(400).json({ success: false, message: error.message || 'Failed to create purchase' });
+  }
+};
+
+// @desc    Update an existing purchase order
+// @route   PUT /api/purchases/:id
+// @access  Private
+const updatePurchase = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { supplierId, items, discount = 0, paid = 0, date } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No purchase items provided' });
+    }
+
+    let resolvedSupplierId = supplierId;
+    if (!resolvedSupplierId) {
+      let defaultSupp = await Supplier.findOne({ name: 'General Supplier' });
+      if (!defaultSupp) {
+        defaultSupp = await Supplier.create({ name: 'General Supplier', phone: '', address: '' });
+      }
+      resolvedSupplierId = defaultSupp._id;
+    }
+
+    // Financial calculations
+    let calculatedSubtotal = 0;
+    const validatedItems = items.map(item => {
+      const parsedQty = Number(item.quantity);
+      const quantity = Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty;
+      const rawCost = item.cost !== undefined ? item.cost : (item.price !== undefined ? item.price : item.unitCost);
+      const parsedCost = Number(rawCost);
+      const cost = Number.isNaN(parsedCost) ? 0 : Math.max(0, parsedCost);
+      const total = quantity * cost;
+      calculatedSubtotal += total;
+
+      return {
+        productId: item.productId,
+        quantity,
+        cost,
+        total
+      };
+    });
+
+    const validatedDiscount = Math.max(0, Number(discount) || 0);
+    const validatedPaid = Math.max(0, Number(paid) || 0);
+    const calculatedGrandTotal = Math.max(0, calculatedSubtotal - validatedDiscount);
+    const calculatedRemaining = Math.max(0, calculatedGrandTotal - validatedPaid);
+
+    let status = 'UNPAID';
+    if (validatedPaid >= calculatedGrandTotal && calculatedGrandTotal > 0) status = 'PAID';
+    else if (validatedPaid > 0) status = 'PARTIAL';
+    else if (calculatedGrandTotal === 0) status = 'PAID';
+
+    const result = await runInTransaction(async (session) => {
+      const opts = session ? { session } : {};
+
+      const oldPurchase = await Purchase.findById(id).session(session);
+      if (!oldPurchase) throw new Error('Purchase not found');
+      if (oldPurchase.isCancelled) throw new Error('Cancelled purchases cannot be edited');
+
+      // 1. Revert previous stock changes (decrease stock added previously)
+      for (const item of oldPurchase.items) {
+        await Product.findByIdAndUpdate(
+          item.productId,
+          { $inc: { currentStock: -Number(item.quantity) } },
+          opts
+        );
+      }
+
+      // 2. Revert previous supplier remaining balance
+      if (oldPurchase.supplierId) {
+        await Supplier.findByIdAndUpdate(
+          oldPurchase.supplierId,
+          { $inc: { currentBalance: -Number(oldPurchase.remaining) } },
+          opts
+        );
+      }
+
+      // 3. Remove old stock movement logs for this purchase
+      await StockMovement.deleteMany({ referenceId: oldPurchase._id }, opts);
+
+      // 4. Verify all new products exist
+      const productIds = validatedItems.map(i => i.productId);
+      const existingProducts = await Product.find({ _id: { $in: productIds } })
+        .select('_id')
+        .session(session);
+
+      if (existingProducts.length !== productIds.length) {
+        const foundIds = new Set(existingProducts.map(p => p._id.toString()));
+        const missing = productIds.find(pid => !foundIds.has(pid.toString()));
+        throw new Error(`Product not found: ${missing}`);
+      }
+
+      // 5. Apply new stock increments and cost updates
+      const stockBulkOps = validatedItems.map(item => ({
+        updateOne: {
+          filter: { _id: item.productId },
+          update: {
+            $inc: { currentStock: Number(item.quantity) },
+            $set: { purchasePrice: Number(item.cost) }
+          }
+        }
+      }));
+      await Product.bulkWrite(stockBulkOps, opts);
+
+      // 6. Record new stock movements
+      const movementDocs = validatedItems.map(item => ({
+        productId: item.productId,
+        type: 'PURCHASE',
+        quantity: Number(item.quantity),
+        reason: `Purchase Invoice (Edited): ${oldPurchase.purchaseNumber}`,
+        referenceId: oldPurchase._id,
+        date: date || oldPurchase.date
+      }));
+      await StockMovement.insertMany(movementDocs, opts);
+
+      // 7. Update new supplier balance
+      await Supplier.findByIdAndUpdate(
+        resolvedSupplierId,
+        { $inc: { currentBalance: Number(calculatedRemaining) } },
+        opts
+      );
+
+      // 8. Update Purchase document
+      oldPurchase.supplierId = resolvedSupplierId;
+      oldPurchase.items = validatedItems;
+      oldPurchase.subtotal = calculatedSubtotal;
+      oldPurchase.discount = validatedDiscount;
+      oldPurchase.grandTotal = calculatedGrandTotal;
+      oldPurchase.paid = validatedPaid;
+      oldPurchase.remaining = calculatedRemaining;
+      if (date) oldPurchase.date = date;
+      oldPurchase.status = status;
+
+      await oldPurchase.save(opts);
+      return oldPurchase;
+    });
+
+    res.json({ success: true, data: result, message: 'Purchase updated successfully' });
+  } catch (error) {
+    console.error('updatePurchase error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Failed to update purchase' });
   }
 };
 
@@ -436,6 +583,7 @@ module.exports = {
   getPurchases,
   getPurchaseById,
   createPurchase,
+  updatePurchase,
   togglePurchaseStatus,
   addPurchasePayment,
   getNextPurchaseNumber

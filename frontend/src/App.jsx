@@ -71,10 +71,12 @@ function App() {
 
               <Route path="sales" element={<SalesPage />} />
               <Route path="sales/new" element={<NewSalePage />} />
+              <Route path="sales/edit/:id" element={<NewSalePage />} />
               <Route path="invoice/sale/:id" element={<Invoice />} />
 
               <Route path="purchases" element={<PurchasesPage />} />
               <Route path="purchases/new" element={<NewPurchasePage />} />
+              <Route path="purchases/edit/:id" element={<NewPurchasePage />} />
               <Route path="invoice/purchase/:id" element={<Invoice />} />
 
               <Route path="customers" element={<CustomersPage />} />
