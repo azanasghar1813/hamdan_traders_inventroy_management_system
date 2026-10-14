@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import { FiDownload, FiFilter, FiImage } from 'react-icons/fi';
+import { FiDownload, FiFilter, FiImage, FiPackage, FiSearch } from 'react-icons/fi';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -21,6 +21,9 @@ const ReportsPage = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [queryTrigger, setQueryTrigger] = useState(0);
+
+  const [itemSearch, setItemSearch] = useState('');
+  const [itemSort, setItemSort] = useState('qty-desc');
 
   useEffect(() => {
     let ignore = false;
@@ -57,6 +60,21 @@ const ReportsPage = () => {
     setQueryTrigger((prev) => prev + 1);
   };
 
+  const filteredItemStats = useMemo(() => {
+    if (!reportData?.itemStats) return [];
+    let list = reportData.itemStats;
+    if (itemSearch.trim()) {
+      const q = itemSearch.toLowerCase();
+      list = list.filter((i) => i.name.toLowerCase().includes(q));
+    }
+    const sorted = [...list];
+    if (itemSort === 'qty-desc') sorted.sort((a, b) => b.totalQuantity - a.totalQuantity);
+    else if (itemSort === 'amount-desc') sorted.sort((a, b) => b.totalAmount - a.totalAmount);
+    else if (itemSort === 'orders-desc') sorted.sort((a, b) => b.orderCount - a.orderCount);
+    else if (itemSort === 'name-asc') sorted.sort((a, b) => a.name.localeCompare(b.name));
+    return sorted;
+  }, [reportData?.itemStats, itemSearch, itemSort]);
+
   const exportToPDF = () => {
     if (!reportData) return;
 
@@ -67,25 +85,27 @@ const ReportsPage = () => {
     const title = activeTab === 'sales' ? 'Sales Report' : 'Purchases Report';
 
     doc.setFontSize(18);
-    doc.text(title, 14, 22);
+    doc.text(title, 14, 20);
 
-    doc.setFontSize(11);
-    doc.text(`Date Range: ${startDate} to ${endDate}`, 14, 30);
+    doc.setFontSize(10);
+    doc.text(`Date Range: ${startDate} to ${endDate}`, 14, 28);
     doc.text(
       `Total ${activeTab === 'sales' ? 'Sales' : 'Purchases'}: Rs. ${(
         reportData.summary.totalSales || reportData.summary.totalPurchases || 0
-      ).toLocaleString()}`,
+      ).toLocaleString()} | Total Qty: ${(reportData.summary.totalQuantity || 0).toLocaleString()} Units (${reportData.summary.totalDistinctItems || 0} Products)`,
       14,
-      38
+      35
     );
+    let startY = 41;
     if (reportData.summary?.cancelledCount > 0) {
       doc.setTextColor(220, 38, 38);
       doc.text(
-        `Cancelled: ${reportData.summary.cancelledCount} items (Rs. ${(reportData.summary.cancelledTotal || 0).toLocaleString()})`,
+        `Cancelled: ${reportData.summary.cancelledCount} orders (Rs. ${(reportData.summary.cancelledTotal || 0).toLocaleString()}) - Excluded from totals`,
         14,
-        45
+        startY
       );
       doc.setTextColor(0, 0, 0);
+      startY += 6;
     }
 
     const headers = [
@@ -102,10 +122,30 @@ const ReportsPage = () => {
     ]);
 
     doc.autoTable({
-      startY: reportData.summary?.cancelledCount > 0 ? 52 : 45,
+      startY: startY + 2,
       head: headers,
       body: data,
     });
+
+    // Add Item-wise breakdown table to PDF
+    if (reportData.itemStats && reportData.itemStats.length > 0) {
+      const finalY = (doc.lastAutoTable?.finalY || 100) + 12;
+      doc.setFontSize(14);
+      doc.text(`Item-wise ${activeTab === 'sales' ? 'Sales' : 'Purchases'} Summary`, 14, finalY);
+      const itemHeaders = [['Product Name', 'Unit', 'Total Qty', 'Total Amount', 'Orders Count']];
+      const itemData = reportData.itemStats.map((item) => [
+        item.name,
+        item.unit || 'Units',
+        item.totalQuantity.toLocaleString(),
+        `Rs. ${item.totalAmount.toLocaleString()}`,
+        item.orderCount.toString(),
+      ]);
+      doc.autoTable({
+        startY: finalY + 4,
+        head: itemHeaders,
+        body: itemData,
+      });
+    }
 
     doc.save(`${activeTab}_report_${startDate}_to_${endDate}.pdf`);
   };
@@ -219,7 +259,7 @@ const ReportsPage = () => {
         <div className="overflow-x-auto w-full pb-4">
           <div id="report-content" className="space-y-6 min-w-[800px] md:min-w-full">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white rounded-lg shadow p-5 border-b-4 border-blue-500">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                   Total {activeTab === 'sales' ? 'Sales' : 'Purchases'}
@@ -228,6 +268,17 @@ const ReportsPage = () => {
                   Rs. {(reportData.summary.totalSales || reportData.summary.totalPurchases || 0).toLocaleString()}
                 </p>
                 <span className="text-[11px] text-gray-400">Active transactions</span>
+              </div>
+              <div className="bg-white rounded-lg shadow p-5 border-b-4 border-purple-500">
+                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-1">
+                  Total Qty {activeTab === 'sales' ? 'Sold' : 'Purchased'}
+                </p>
+                <p className="text-2xl font-bold text-purple-700">
+                  {(reportData.summary.totalQuantity || 0).toLocaleString()} <span className="text-xs font-semibold text-purple-500">Units</span>
+                </p>
+                <span className="text-[11px] text-gray-400">
+                  {reportData.summary.totalDistinctItems || 0} items ({reportData.summary.totalLineItems || 0} lines)
+                </span>
               </div>
               <div className="bg-white rounded-lg shadow p-5 border-b-4 border-green-500">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Paid / Received</p>
@@ -259,6 +310,114 @@ const ReportsPage = () => {
                 </div>
                 <span className="text-[11px] text-red-400">Excluded from totals</span>
               </div>
+            </div>
+
+            {/* Item Breakdown Cards */}
+            <div className="bg-white rounded-lg shadow p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <FiPackage className="text-purple-600" />
+                    Item {activeTab === 'sales' ? 'Sales' : 'Purchases'} Breakdown
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Quantity and value cards for all items {activeTab === 'sales' ? 'sold' : 'purchased'} ({reportData.itemStats?.length || 0} items)
+                  </p>
+                </div>
+
+                {/* Filter & Sort Controls for items */}
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-56">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+                    <input
+                      type="text"
+                      placeholder="Search items..."
+                      value={itemSearch}
+                      onChange={(e) => setItemSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <select
+                    value={itemSort}
+                    onChange={(e) => setItemSort(e.target.value)}
+                    className="px-3 py-1.5 text-xs sm:text-sm border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="qty-desc">Sort: Highest Qty</option>
+                    <option value="amount-desc">Sort: Highest Value</option>
+                    <option value="orders-desc">Sort: Most Orders</option>
+                    <option value="name-asc">Sort: Name (A-Z)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Cards Grid */}
+              {filteredItemStats.length === 0 ? (
+                <div className="py-8 text-center text-gray-500 text-sm">
+                  {itemSearch ? 'No items match your search filter.' : `No items ${activeTab === 'sales' ? 'sold' : 'purchased'} in this period.`}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {filteredItemStats.map((item) => {
+                    const avgPrice = item.totalQuantity > 0 ? Math.round(item.totalAmount / item.totalQuantity) : 0;
+                    return (
+                      <div
+                        key={item.productId}
+                        className="bg-gray-50/70 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2" title={item.name}>
+                              {item.name}
+                            </h3>
+                            <span className="px-2 py-0.5 text-[11px] font-medium rounded bg-blue-100 text-blue-800 shrink-0">
+                              {item.unit || 'Units'}
+                            </span>
+                          </div>
+
+                          {/* Quantity Highlight */}
+                          <div className="bg-white rounded-md p-3 border border-gray-100 mb-3 shadow-xs">
+                            <span className="text-[11px] text-gray-500 uppercase tracking-wider block font-medium">
+                              {activeTab === 'sales' ? 'Total Quantity Sold' : 'Total Quantity Purchased'}
+                            </span>
+                            <div className="flex items-baseline gap-1.5 mt-0.5">
+                              <span className="text-2xl font-extrabold text-purple-700">
+                                {item.totalQuantity.toLocaleString()}
+                              </span>
+                              <span className="text-xs font-semibold text-gray-600">
+                                {item.unit || 'units'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Financial Details */}
+                        <div className="space-y-1.5 text-xs text-gray-600 border-t border-gray-200/80 pt-2.5">
+                          <div className="flex justify-between">
+                            <span>Total Value:</span>
+                            <span className="font-bold text-gray-900">Rs. {item.totalAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Avg Price / Rate:</span>
+                            <span className="font-medium text-gray-700">Rs. {avgPrice.toLocaleString()} / {item.unit || 'unit'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Order Frequency:</span>
+                            <span className="font-medium text-gray-700">{item.orderCount} {item.orderCount === 1 ? 'order' : 'orders'}</span>
+                          </div>
+                          {item.currentStock !== null && (
+                            <div className="flex justify-between pt-1 border-t border-dashed border-gray-200 text-[11px]">
+                              <span className="text-gray-500">Current Stock:</span>
+                              <span className={`font-semibold ${item.currentStock > 0 ? 'text-green-700' : 'text-red-600'}`}>
+                                {item.currentStock} {item.unit || 'units'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Data Table */}
