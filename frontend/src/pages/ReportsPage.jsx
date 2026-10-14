@@ -375,6 +375,33 @@ const ReportsPage = () => {
           } catch (e) {
             console.warn('Failed to inject unlayered styles', e);
           }
+
+          // Prepend official report header banner for exported image
+          try {
+            const exportHeader = clonedDoc.createElement('div');
+            exportHeader.style.paddingBottom = '16px';
+            exportHeader.style.marginBottom = '24px';
+            exportHeader.style.borderBottom = '2px solid #e2e8f0';
+            exportHeader.style.display = 'flex';
+            exportHeader.style.justifyContent = 'space-between';
+            exportHeader.style.alignItems = 'center';
+            exportHeader.innerHTML = `
+              <div>
+                <h2 style="font-size: 22px; font-weight: 900; color: #111827; margin: 0; text-transform: uppercase; letter-spacing: 0.03em;">
+                  ${activeTab === 'sales' ? 'OFFICIAL SALES REPORT' : 'OFFICIAL PURCHASES REPORT'}
+                </h2>
+                <p style="font-size: 12px; font-weight: 600; color: #4b5563; margin: 4px 0 0 0;">
+                  Period: <strong style="color: #111827;">${formattedStartDate}</strong> to <strong style="color: #111827;">${formattedEndDate}</strong>
+                </p>
+              </div>
+              <div style="text-align: right; font-size: 11px; color: #6b7280; font-weight: 500;">
+                Generated: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}
+              </div>
+            `;
+            clonedElement.insertBefore(exportHeader, clonedElement.firstChild);
+          } catch (err) {
+            console.warn('Failed to prepend export header', err);
+          }
         },
       });
 
@@ -399,8 +426,29 @@ const ReportsPage = () => {
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Financial Reports</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Generate, view, and export detailed sales and purchase reports</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-black text-gray-900 tracking-wide uppercase">
+              {activeTab === 'sales' ? 'OFFICIAL SALES REPORT' : 'OFFICIAL PURCHASES REPORT'}
+            </h1>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                activeTab === 'sales'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-teal-50 text-teal-700 border-teal-200'
+              }`}
+            >
+              Live
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-600 font-medium">
+            <span>
+              Period: <strong className="text-gray-900">{formattedStartDate}</strong> to <strong className="text-gray-900">{formattedEndDate}</strong>
+            </span>
+            <span className="text-gray-300 hidden sm:inline">•</span>
+            <span>
+              Generated: <strong className="text-gray-700">{format(new Date(), 'dd MMM yyyy, hh:mm a')}</strong>
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-3 w-full sm:w-auto">
           <button
@@ -569,71 +617,6 @@ const ReportsPage = () => {
                 letter-spacing: 0.025em;
               }
             `}</style>
-
-            {/* Official Report Header */}
-            <div
-              className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-5 border-b-2 border-yellow-500 gap-4"
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingBottom: '18px',
-                borderBottom: '3px solid #eab308',
-                marginBottom: '20px',
-              }}
-            >
-              <div>
-                <h2
-                  className="text-2xl font-black text-gray-900 tracking-wide uppercase"
-                  style={{ fontSize: '24px', fontWeight: '900', color: '#111827', margin: 0, letterSpacing: '0.04em' }}
-                >
-                  HAMDAN TRADERS
-                </h2>
-                <p
-                  className="text-xs font-bold text-gray-600 uppercase tracking-wider"
-                  style={{ fontSize: '12px', fontWeight: '700', color: '#4b5563', margin: '3px 0 0 0' }}
-                >
-                  Frozen Items Supplier & Wholesale Distribution
-                </p>
-                <p
-                  className="text-xs italic font-medium text-amber-600"
-                  style={{ fontSize: '11px', fontStyle: 'italic', color: '#d97706', margin: '2px 0 0 0' }}
-                >
-                  Behtareen Taste, Hamesha Aapke Sath!
-                </p>
-                <p
-                  className="text-xs font-bold text-gray-800"
-                  style={{ fontSize: '12px', fontWeight: '700', color: '#1f2937', margin: '4px 0 0 0' }}
-                >
-                  📞 0319-2828305 | 0300-2970372
-                </p>
-              </div>
-
-              <div className="text-right" style={{ textAlign: 'right' }}>
-                <div
-                  className="rpt-badge mb-1.5"
-                  style={{
-                    display: 'inline-block',
-                    padding: '4px 12px',
-                    borderRadius: '9999px',
-                    fontSize: '12px',
-                    fontWeight: '800',
-                    backgroundColor: activeTab === 'sales' ? '#dbeafe' : '#ccfbf1',
-                    color: activeTab === 'sales' ? '#1e40af' : '#115e59',
-                    border: `1px solid ${activeTab === 'sales' ? '#93c5fd' : '#99f6e4'}`,
-                  }}
-                >
-                  {activeTab === 'sales' ? 'OFFICIAL SALES REPORT' : 'OFFICIAL PURCHASES REPORT'}
-                </div>
-                <p style={{ fontSize: '12px', color: '#374151', margin: '3px 0', fontWeight: '600' }}>
-                  Period: <span style={{ color: '#111827' }}>{formattedStartDate}</span> to <span style={{ color: '#111827' }}>{formattedEndDate}</span>
-                </p>
-                <p style={{ fontSize: '11px', color: '#6b7280', margin: '2px 0' }}>
-                  Generated: {format(new Date(), 'dd MMM yyyy, hh:mm a')}
-                </p>
-              </div>
-            </div>
 
             {/* Executive Summary Cards */}
             <div className="rpt-summary-grid">
