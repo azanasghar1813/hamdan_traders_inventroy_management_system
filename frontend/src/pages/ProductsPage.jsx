@@ -7,7 +7,7 @@ import MobileCardView from '../components/MobileCardView';
 import { FiPlus, FiSearch, FiTrash2, FiEdit2 } from 'react-icons/fi';
 
 const ProductsPage = () => {
-  const [view, setView] = useViewPreference('products', 'list');
+  const [view, setView] = useViewPreference('products', 'card');
   const [products, setProducts] = useState([]);
 
   const [loading, setLoading] = useState(true);

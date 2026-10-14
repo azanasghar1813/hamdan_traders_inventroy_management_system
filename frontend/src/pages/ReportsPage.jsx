@@ -3,8 +3,10 @@ import api from '../services/api';
 import { FiDownload, FiFilter, FiImage, FiPackage, FiSearch } from 'react-icons/fi';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable, { applyPlugin } from 'jspdf-autotable';
 import html2canvas from 'html2canvas-pro';
+
+applyPlugin(jsPDF);
 
 // Extracts unlayered CSS rules from stylesheets so html2canvas can read Tailwind v4 @layer utilities
 const getUnlayeredStyles = () => {
@@ -247,7 +249,7 @@ const ReportsPage = () => {
         item.isCancelled ? 'CANCELLED' : item.status,
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: currentY,
         head: headers,
         body: data,
@@ -302,7 +304,7 @@ const ReportsPage = () => {
           ];
         });
 
-        doc.autoTable({
+        autoTable(doc, {
           startY: finalY + 4,
           head: itemHeaders,
           body: itemData,

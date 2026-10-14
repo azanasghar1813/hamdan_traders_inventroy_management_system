@@ -8,7 +8,7 @@ import { FiSearch, FiSliders } from 'react-icons/fi';
 import { format } from 'date-fns';
 
 const StockPage = () => {
-  const [view, setView] = useViewPreference('stock', 'list');
+  const [view, setView] = useViewPreference('stock', 'card');
   const [products, setProducts] = useState([]);
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);

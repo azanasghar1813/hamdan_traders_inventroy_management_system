@@ -41,7 +41,7 @@ const Dashboard = () => {
   if (loading) return <div className="text-center py-10">Loading dashboard...</div>;
   if (!stats) return <div className="text-center py-10 text-red-500">Failed to load data.</div>;
 
-  const { summary, recentSales, lowStockProducts, allProductsStock } = stats;
+  const { summary, recentSales, allProductsStock } = stats;
 
   return (
     <div className="space-y-6">
@@ -73,52 +73,63 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-              <FiBox className="text-xl" />
+      {/* Summary Cards - Single Horizontal Line on Mobile, Grid on Tablet/Desktop */}
+      <div className="flex overflow-x-auto no-scrollbar gap-3 pb-1 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 snap-x">
+        {/* Card 1: Total Products */}
+        <div className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-blue-500">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="p-2 sm:p-3 rounded-full bg-blue-100 text-blue-600 shrink-0">
+              <FiBox className="text-base sm:text-xl" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Products</p>
-              <p className="text-2xl font-bold text-gray-900">{summary.totalProducts}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 border-t-4 border-red-500 cursor-pointer hover:bg-gray-50 transition" onClick={() => window.location.href='/alerts'}>
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-red-100 text-red-600 mr-4">
-              <FiAlertTriangle className="text-xl" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Low Stock Alerts</p>
-              <p className="text-2xl font-bold text-gray-900">{summary.lowStockCount}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-gray-500 truncate">Total Products</p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">{summary.totalProducts}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 border-t-4 border-green-500">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
-              <FiDollarSign className="text-xl" />
+        {/* Card 2: Low Stock Alerts */}
+        <div
+          className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-red-500 cursor-pointer hover:bg-gray-50 transition"
+          onClick={() => (window.location.href = '/alerts')}
+        >
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="p-2 sm:p-3 rounded-full bg-red-100 text-red-600 shrink-0">
+              <FiAlertTriangle className="text-base sm:text-xl" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Today's Sales</p>
-              <p className="text-2xl font-bold text-gray-900">Rs. {summary.todaySalesAmount.toLocaleString()}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-gray-500 truncate">Low Stock Alerts</p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">{summary.lowStockCount}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
-              <FiShoppingCart className="text-xl" />
+        {/* Card 3: Today's Sales */}
+        <div className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-green-500">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="p-2 sm:p-3 rounded-full bg-green-100 text-green-600 shrink-0">
+              <FiDollarSign className="text-base sm:text-xl" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Monthly Sales</p>
-              <p className="text-2xl font-bold text-gray-900">Rs. {summary.monthlySalesAmount.toLocaleString()}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-gray-500 truncate">Today's Sales</p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">
+                Rs. {summary.todaySalesAmount.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Monthly Sales */}
+        <div className="min-w-[145px] sm:min-w-[170px] flex-1 shrink-0 snap-start bg-white rounded-xl shadow-xs p-3.5 sm:p-5 border-t-4 border-purple-500">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="p-2 sm:p-3 rounded-full bg-purple-100 text-purple-600 shrink-0">
+              <FiShoppingCart className="text-base sm:text-xl" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-gray-500 truncate">Monthly Sales</p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">
+                Rs. {summary.monthlySalesAmount.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
@@ -160,108 +171,127 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Low Stock Warnings */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow p-6 border-t-4 border-red-500">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center">
-              <FiAlertTriangle className="mr-2 text-red-500" /> Low Stock Warnings
-            </h2>
-            <Link to="/stock" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
-              View all <FiArrowRight className="ml-1" />
-            </Link>
+      {/* Recent Sales Section (with scroller if > 5 items, up to 20 sales) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-blue-50 text-blue-600">
+              <FiShoppingCart className="w-4 h-4" />
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-gray-800">Recent Sales</h2>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+              {recentSales.length}
+            </span>
           </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 responsive-table">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Min Stock</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {lowStockProducts && lowStockProducts.map(product => (
-                  <tr key={product._id}>
-                    <td data-label="Product" className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
-                    <td data-label="Current Stock" className="px-4 py-3 whitespace-nowrap text-sm text-right font-bold text-red-600">
-                      {product.currentStock} {product.unit}
-                    </td>
-                    <td data-label="Min Stock" className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-500">
-                      {product.minimumStock} {product.unit}
-                    </td>
-                  </tr>
-                ))}
-                {(!lowStockProducts || lowStockProducts.length === 0) && (
-                  <tr>
-                    <td colSpan="3" className="px-4 py-8 text-center text-gray-500 text-sm">
-                      No low stock warnings. All products are sufficiently stocked.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Link to="/sales" className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center">
+            View all <FiArrowRight className="ml-1" />
+          </Link>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Recent Sales</h2>
-            <Link to="/sales" className="text-sm text-blue-600 hover:text-blue-800 flex items-center">
-              View all <FiArrowRight className="ml-1" />
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {recentSales.map((sale) => (
-              <div key={sale._id} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className={`text-sm font-bold ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-800'}`}>
-                      {sale.invoiceNumber}
-                    </p>
-                    {sale.isCancelled && (
-                      <span className="px-1.5 py-0.2 text-[10px] bg-red-100 text-red-700 font-bold rounded">
-                        Cancelled
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">{sale.customerId?.name || 'Unknown'}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-sm font-bold ${sale.isCancelled ? 'text-red-500 line-through' : 'text-green-600'}`}>
-                    Rs. {sale.grandTotal.toLocaleString()}
+        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+          {recentSales.map((sale) => (
+            <div
+              key={sale._id}
+              className="flex justify-between items-center p-2.5 rounded-lg hover:bg-gray-50 transition border border-gray-100"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className={`text-sm font-bold ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-900'}`}>
+                    {sale.invoiceNumber}
                   </p>
-                  <p className="text-[10px] text-gray-400">{new Date(sale.date).toLocaleDateString()}</p>
+                  {sale.isCancelled && (
+                    <span className="px-1.5 py-0.5 text-[10px] bg-red-100 text-red-700 font-bold rounded">
+                      Cancelled
+                    </span>
+                  )}
                 </div>
+                <p className="text-xs text-gray-500 font-medium">{sale.customerId?.name || 'Walk-in Customer'}</p>
               </div>
-            ))}
-            {recentSales.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No recent sales.</p>
-            )}
-          </div>
+              <div className="text-right">
+                <p className={`text-sm font-bold ${sale.isCancelled ? 'text-red-500 line-through' : 'text-emerald-700'}`}>
+                  Rs. {sale.grandTotal.toLocaleString()}
+                </p>
+                <p className="text-[11px] text-gray-400 font-medium">{new Date(sale.date).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+          {recentSales.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-6">No recent sales.</p>
+          )}
         </div>
       </div>
 
-      {/* Product Stock Cards */}
-      <div>
-        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-          <FiBox className="mr-2 text-blue-500" /> Current Inventory Overview
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {allProductsStock && allProductsStock.map(product => (
-            <div key={product._id} className="bg-white rounded-lg shadow border border-gray-100 p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition">
-              <h3 className="text-sm font-bold text-gray-800 mb-2 truncate w-full">{product.name}</h3>
-              <div className="text-2xl font-black text-blue-600 mb-1">{product.currentStock}</div>
-              <p className="text-xs font-medium text-gray-500 uppercase">{product.unit}</p>
+      {/* Upgraded Current Inventory Overview */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-blue-50 text-blue-600">
+              <FiBox className="w-4 h-4" />
             </div>
-          ))}
+            <h2 className="text-base sm:text-lg font-bold text-gray-800">Current Inventory Overview</h2>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+              {allProductsStock?.length || 0} Products
+            </span>
+          </div>
+          <Link to="/stock" className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center">
+            Manage Stock <FiArrowRight className="ml-1" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+          {allProductsStock && allProductsStock.map((product) => {
+            const isWarning = (product.currentStock || 0) <= (product.minimumStock || 0);
+            return (
+              <div
+                key={product._id}
+                className={`rounded-xl p-3.5 border transition-all shadow-xs flex flex-col justify-between ${
+                  isWarning
+                    ? 'bg-red-50/40 border-red-300 hover:border-red-400 hover:shadow-sm'
+                    : 'bg-emerald-50/20 border-emerald-200 hover:border-emerald-300 hover:shadow-sm'
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-1.5 mb-2">
+                    <h3 className="text-sm font-bold text-gray-900 truncate" title={product.name}>
+                      {product.name}
+                    </h3>
+                    <span
+                      className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0 uppercase tracking-wider ${
+                        isWarning
+                          ? 'bg-red-100 text-red-700 border border-red-200'
+                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      }`}
+                    >
+                      {isWarning ? 'Low Stock' : 'In Stock'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-xs font-medium text-gray-500">Current Stock:</span>
+                    <span
+                      className={`text-lg font-black ${
+                        isWarning ? 'text-red-600' : 'text-emerald-700'
+                      }`}
+                    >
+                      {product.currentStock?.toLocaleString() || 0}
+                      <span className="text-xs font-semibold text-gray-500 ml-1 uppercase">{product.unit || ''}</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500 mt-1 pt-1.5 border-t border-gray-100/80">
+                    <span className="text-[11px] font-medium text-gray-400">Min Stock:</span>
+                    <span className="font-semibold text-gray-700">
+                      {product.minimumStock?.toLocaleString() || 0} {product.unit || ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
           {(!allProductsStock || allProductsStock.length === 0) && (
-             <div className="col-span-full py-6 text-center text-gray-500 bg-white rounded-lg shadow">
-               No products available.
-             </div>
+            <div className="col-span-full py-8 text-center text-gray-500 bg-gray-50 rounded-lg">
+              No products available in inventory.
+            </div>
           )}
         </div>
       </div>

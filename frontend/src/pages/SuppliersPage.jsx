@@ -9,7 +9,7 @@ import { FiPlus, FiEdit, FiSearch, FiDollarSign, FiTrash2, FiEye, FiExternalLink
 import { format } from 'date-fns';
 
 const SuppliersPage = () => {
-  const [view, setView] = useViewPreference('suppliers', 'list');
+  const [view, setView] = useViewPreference('suppliers', 'card');
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -21,7 +21,7 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-f
 
 const PurchasesPage = () => {
   const navigate = useNavigate();
-  const [view, setView] = useViewPreference('purchases', 'list');
+  const [view, setView] = useViewPreference('purchases', 'card');
   const [purchases, setPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);

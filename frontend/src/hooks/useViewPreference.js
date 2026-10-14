@@ -4,7 +4,7 @@ import { useState } from 'react';
  * Persists a list/card choice per page in localStorage.
  * Usage: const [view, setView] = useViewPreference('sales', 'list');
  */
-export default function useViewPreference(key, defaultView = 'list') {
+export default function useViewPreference(key, defaultView = 'card') {
   const storageKey = `view:${key}`;
 
   const [view, setView] = useState(() => {

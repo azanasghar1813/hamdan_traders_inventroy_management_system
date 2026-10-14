@@ -65,25 +65,19 @@ const getDashboardStats = async (req, res) => {
         { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } }
       ]),
 
-      // 8. Recent Sales (Last 5)
+      // 8. Recent Sales (Last 20)
       Sale.find()
         .populate('customerId', 'name')
         .sort({ createdAt: -1 })
-        .limit(5)
+        .limit(20)
         .lean(),
 
-      // 9. Low Stock Products (Active & not deleted)
-      Product.find({
-        $expr: { $lte: ['$currentStock', '$minimumStock'] },
-        isActive: true,
-        isDeleted: { $ne: true }
-      })
-        .limit(10)
-        .lean(),
+      // 9. Low Stock Products (kept empty as section is removed)
+      Promise.resolve([]),
 
-      // 10. All active products for stock cards (not deleted)
+      // 10. All active products for stock cards (including minimumStock)
       Product.find({ isActive: true, isDeleted: { $ne: true } })
-        .select('name currentStock unit')
+        .select('name currentStock minimumStock unit')
         .sort({ name: 1 })
         .lean()
     ]);
