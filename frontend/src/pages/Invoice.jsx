@@ -276,66 +276,79 @@ const Invoice = () => {
       <div 
         className="hidden print:block text-black bg-white" 
         style={{ 
-          fontFamily: "'Courier New', Courier, monospace", 
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", 
           width: '74mm', 
           maxWidth: '74mm', 
           margin: '0 auto', 
-          padding: '1mm 2mm',
+          padding: '2mm 3mm',
           boxSizing: 'border-box'
         }}
       >
         {/* Header */}
         <div className="text-center mb-3">
-          <h2 className="text-xl font-black uppercase tracking-wider mb-1" style={{ letterSpacing: '0.04em' }}>
+          <h2 className="text-2xl font-black uppercase tracking-wide mb-1" style={{ letterSpacing: '0.03em' }}>
             HAMDAN TRADERS
           </h2>
-          <p className="font-bold text-xs uppercase tracking-widest mb-1">
-            FROZEN ITEMS SUPPLIER
+          <p className="text-xs font-normal mb-1">
+            0319-2828305 &nbsp;|&nbsp; 0300-2970372
           </p>
-          <p className="text-xs font-semibold mb-0.5">
-            0319-2828305 | 0300-2970372
-          </p>
-          <p className="text-[11px] font-bold tracking-wider uppercase">
-            *** ONLY DELIVERY AVAILABLE ***
+          <p className="text-xs font-bold uppercase tracking-wider">
+            ONLY DELIVERY AVAILABLE
           </p>
         </div>
 
+        <div className="border-b-[1.5px] border-black my-3" />
+
         {/* Invoice & Party Metadata */}
-        <div className="border-t-2 border-b-2 border-black py-2 mb-3 text-xs leading-relaxed">
-          <div className="flex justify-between mb-1">
-            <span className="font-semibold">{isSale ? 'Invoice #:' : 'Purchase #:'}</span>
-            <span className="font-bold text-sm tracking-wider">{invoiceNumber}</span>
+        <div className="space-y-1.5 text-xs">
+          <div className="grid grid-cols-[85px_1fr] items-baseline">
+            <span className="font-bold">Invoice #:</span>
+            <span>{invoiceNumber}</span>
           </div>
-          <div className="flex justify-between mb-1">
-            <span className="font-semibold">Date:</span>
-            <span className="font-bold">{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
+          <div className="grid grid-cols-[85px_1fr] items-baseline">
+            <span className="font-bold">Date:</span>
+            <span>{format(new Date(data.date), 'dd/MM/yyyy')}</span>
           </div>
-          <div className="border-t border-dashed border-gray-400 my-1.5" />
-          <div className="flex justify-between items-start mb-1">
-            <span className="font-semibold shrink-0 mr-2">{isSale ? 'Customer:' : 'Supplier:'}</span>
-            <span className="font-bold text-right leading-tight break-words">{partyName || 'Cash / Walk-in'}</span>
+          <div className="grid grid-cols-[85px_1fr] items-baseline">
+            <span className="font-bold">Time:</span>
+            <span>{format(new Date(data.date), 'hh:mm a')}</span>
+          </div>
+
+          <div className="border-t border-dashed border-black my-2.5" />
+
+          <div className="grid grid-cols-[85px_1fr] items-start">
+            <span className="font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
+            <span className="leading-tight break-words">{partyName || 'Cash / Walk-in'}</span>
           </div>
           {partyPhone && (
-            <div className="flex justify-between items-center mb-1">
-              <span className="font-semibold">Phone:</span>
-              <span className="font-bold">{partyPhone}</span>
+            <div className="grid grid-cols-[85px_1fr] items-baseline">
+              <span className="font-bold">Phone:</span>
+              <span>{partyPhone}</span>
             </div>
           )}
           {partyAddress && (
-            <div className="flex justify-between items-start mb-1">
-              <span className="font-semibold shrink-0 mr-2">Address:</span>
-              <span className="text-right text-[11px] leading-tight break-words">{partyAddress}</span>
+            <div className="grid grid-cols-[85px_1fr] items-start">
+              <span className="font-bold">Address:</span>
+              <span className="text-[11px] leading-tight break-words">{partyAddress}</span>
             </div>
           )}
         </div>
 
-        {/* Items Table */}
-        <table className="w-full mb-3 text-xs text-left border-collapse">
+        <div className="border-b-[1.5px] border-black my-3" />
+
+        {/* Boxed Items Table */}
+        <table className="w-full text-xs border-collapse border border-black mb-3">
           <thead>
-            <tr className="border-b-2 border-black">
-              <th className="py-1 text-left font-bold uppercase" style={{ width: '48%' }}>Item</th>
-              <th className="py-1 text-center font-bold uppercase" style={{ width: '22%' }}>Qty</th>
-              <th className="py-1 text-right font-bold uppercase" style={{ width: '30%' }}>Amount</th>
+            <tr className="border-b border-black">
+              <th className="py-1.5 px-2 text-left font-bold border-r border-black" style={{ width: '48%' }}>
+                Item
+              </th>
+              <th className="py-1.5 px-2 text-center font-bold border-r border-black" style={{ width: '22%' }}>
+                Qty
+              </th>
+              <th className="py-1.5 px-2 text-center font-bold" style={{ width: '30%' }}>
+                Amount
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -343,16 +356,16 @@ const Invoice = () => {
               const price = isSale ? item.price : item.cost;
               const total = (price || 0) * item.quantity;
               return (
-                <tr key={index} className="border-b border-gray-300 border-dashed">
-                  <td className="py-1.5 pr-1 align-top text-left">
+                <tr key={index} className="border-b border-black last:border-b-0">
+                  <td className="py-2 px-2 align-top text-left border-r border-black">
                     <div className="font-bold leading-tight">{item.productId?.name || 'Unknown Product'}</div>
-                    <div className="text-[10px] text-gray-700 mt-0.5">@ Rs. {price?.toLocaleString()}</div>
+                    <div className="text-[11px] text-gray-700 mt-1">@ {price?.toLocaleString()}</div>
                   </td>
-                  <td className="py-1.5 align-top text-center font-bold">
-                    {item.quantity} {item.productId?.unit ? <span className="text-[10px] font-normal">{item.productId.unit}</span> : ''}
+                  <td className="py-2 px-2 align-top text-center font-normal border-r border-black">
+                    {item.quantity}
                   </td>
-                  <td className="py-1.5 align-top text-right font-bold">
-                    {total.toLocaleString()}
+                  <td className="py-2 px-2 align-top text-center font-normal">
+                    Rs. {total.toLocaleString()}
                   </td>
                 </tr>
               );
@@ -361,43 +374,57 @@ const Invoice = () => {
         </table>
 
         {/* Totals Section */}
-        <div className="border-t-2 border-black pt-2 mb-3 text-xs">
-          <div className="flex justify-between mb-1">
-            <span className="font-semibold">Subtotal:</span>
-            <span>Rs. {data.subtotal?.toLocaleString()}</span>
-          </div>
-          {data.discount > 0 && (
-            <div className="flex justify-between mb-1">
-              <span className="font-semibold">Discount:</span>
-              <span>- Rs. {data.discount?.toLocaleString()}</span>
+        <div className="flex justify-end mb-3">
+          <div className="w-[62%] space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="font-bold">Subtotal:</span>
+              <span>Rs. {data.subtotal?.toLocaleString()}</span>
             </div>
-          )}
-          <div className="flex justify-between items-center font-black text-sm my-1.5 border-t-2 border-b-2 border-black py-1.5">
-            <span className="text-sm font-extrabold tracking-wider">TOTAL:</span>
-            <span className="text-base font-extrabold">Rs. {data.grandTotal?.toLocaleString()}</span>
+            {data.discount > 0 && (
+              <div className="flex justify-between">
+                <span className="font-bold">Discount:</span>
+                <span>- Rs. {data.discount?.toLocaleString()}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-baseline font-bold text-sm">
+              <span className="font-black text-sm">TOTAL:</span>
+              <span className="font-black text-sm">Rs. {data.grandTotal?.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-bold">Paid:</span>
+              <span>Rs. {data.paid?.toLocaleString()}</span>
+            </div>
+            <div className="border-t border-dashed border-black my-1" />
+            <div className="flex justify-between font-bold">
+              <span>Balance:</span>
+              <span>Rs. {data.remaining?.toLocaleString()}</span>
+            </div>
           </div>
-          <div className="flex justify-between mb-1">
-            <span className="font-semibold">Paid:</span>
-            <span>Rs. {data.paid?.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between font-bold border-t border-dashed border-gray-400 pt-1.5 mb-2">
-            <span>Balance:</span>
-            <span>Rs. {data.remaining?.toLocaleString()}</span>
-          </div>
+        </div>
 
-          {/* Payment Status Tag */}
-          <div className="text-center my-2">
-            <span className="inline-block border-2 border-black font-extrabold text-[11px] px-3 py-0.5 tracking-widest uppercase">
-              *** {data.status === 'PAID' ? 'PAID IN FULL' : data.status === 'PARTIAL' ? 'PARTIALLY PAID' : 'PAYMENT DUE'} ***
+        <div className="border-b-[1.5px] border-black my-3" />
+
+        {/* Invoice Opened & Status Section */}
+        <div className="space-y-1.5 text-xs">
+          <div className="flex justify-between">
+            <span className="font-bold">Invoice Opened:</span>
+            <span>{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="font-bold">Status:</span>
+            <span className="font-bold text-sm">
+              {data.status === 'PAID' ? 'Paid' : data.status === 'PARTIAL' ? 'Partial' : 'Unpaid'}
             </span>
           </div>
         </div>
 
+        <div className="border-t border-dashed border-black my-3" />
+
         {/* Footer */}
-        <div className="text-center mt-4 pt-2 border-t border-dashed border-black text-xs space-y-1">
+        <div className="text-center mt-3 text-xs space-y-1">
           <p className="font-bold italic text-xs">Behtareen Taste, Hamesha Aapke Sath!</p>
-          <p className="text-[11px]">Thank you for your business.</p>
-          <p className="text-[9px] text-gray-600 mt-2">-- Powered By: www.corevex.tech --</p>
+          <p className="text-[11px] text-gray-800">Thank you for your business.</p>
+          <p className="text-[10px] font-bold text-gray-800 mt-2.5">-- Powered By: www.corevex.tech --</p>
         </div>
       </div>
     </div>
