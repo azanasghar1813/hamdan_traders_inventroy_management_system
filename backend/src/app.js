@@ -28,6 +28,7 @@ const alertRoutes = require('./routes/alertRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const userRoutes = require('./routes/userRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
@@ -41,6 +42,7 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Basic health check routes for Uptime Robot
 app.get('/', (req, res) => res.send('API is running'));

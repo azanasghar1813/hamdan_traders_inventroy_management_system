@@ -50,3 +50,72 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Push notification received
+self.addEventListener('push', (event) => {
+  let notificationData = {
+    title: '🚨 Hamdan Traders Alert',
+    body: 'Stock alert update',
+    icon: '/logo.png',
+    badge: '/logo.png',
+    data: { url: '/alerts' }
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      notificationData = { ...notificationData, ...parsed };
+    } catch (e) {
+      notificationData.body = event.data.text() || notificationData.body;
+    }
+  }
+
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon || '/logo.png',
+    badge: notificationData.badge || '/logo.png',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: notificationData.tag || 'low-stock-alert',
+    renotify: true,
+    requireInteraction: true,
+    data: notificationData.data || { url: '/alerts' },
+    actions: [
+      { action: 'open_alerts', title: 'View Alerts' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, options)
+  );
+});
+
+// Notification click handling - bring app to foreground or open targeted page
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = (event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : '/alerts';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If a window is already open, focus it and navigate
+      for (const client of clientList) {
+        if ('focus' in client) {
+          if (client.url.includes(self.location.origin)) {
+            client.focus();
+            if ('navigate' in client) {
+              return client.navigate(targetUrl);
+            }
+            return client;
+          }
+        }
+      }
+      // Otherwise open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+

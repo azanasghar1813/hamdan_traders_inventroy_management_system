@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { FiAlertTriangle, FiClock } from 'react-icons/fi';
 import { format, differenceInDays } from 'date-fns';
+import PushNotificationCard from '../components/PushNotificationCard';
 
 const AlertsPage = () => {
   const [lowStock, setLowStock] = useState([]);
@@ -35,6 +36,10 @@ const AlertsPage = () => {
   return (
     <div className="max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Inventory Alerts</h1>
+
+      {/* Real-time Push Notification Device Connector */}
+      <PushNotificationCard />
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         

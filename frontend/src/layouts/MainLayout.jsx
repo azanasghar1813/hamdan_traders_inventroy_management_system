@@ -5,6 +5,7 @@ import {
   FiUsers, FiBriefcase, FiAlertTriangle, FiPieChart, FiLogOut, FiMenu, FiX, FiUser
 } from 'react-icons/fi';
 import { AuthContext } from '../context/AuthContext';
+import PushNotificationCard from '../components/PushNotificationCard';
 
 const MainLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -83,16 +84,21 @@ const MainLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 print:block">
         {/* Top Header */}
-        <header className="print:hidden h-16 bg-white shadow-sm flex items-center px-4 md:px-6">
-          <button
-            className="md:hidden mr-4 text-gray-500 hover:text-gray-700"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <FiMenu className="w-6 h-6" />
-          </button>
-          <h2 className="text-xl font-semibold text-gray-800">
-            {menuItems.find(i => i.path === location.pathname)?.name || 'Dashboard'}
-          </h2>
+        <header className="print:hidden h-16 bg-white shadow-sm flex items-center justify-between px-4 md:px-6">
+          <div className="flex items-center">
+            <button
+              className="md:hidden mr-4 text-gray-500 hover:text-gray-700"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <FiMenu className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-semibold text-gray-800">
+              {menuItems.find(i => i.path === location.pathname)?.name || 'Dashboard'}
+            </h2>
+          </div>
+          <div className="flex items-center space-x-3">
+            <PushNotificationCard compact={true} />
+          </div>
         </header>
 
         {/* Page Content */}

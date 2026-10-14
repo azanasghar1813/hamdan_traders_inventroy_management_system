@@ -4,6 +4,42 @@ const Customer = require('../models/Customer');
 const StockMovement = require('../models/StockMovement');
 const { getNextSequence, peekNextSequence } = require('../models/Counter');
 const { runInTransaction } = require('../utils/transactionHelper');
+const { sendPushNotification } = require('../utils/pushNotification');
+
+// Helper to check for low stock products and dispatch real-time web push notification
+const checkAndNotifyLowStock = async (productIds) => {
+  if (!productIds || productIds.length === 0) return;
+  try {
+    const lowStockProducts = await Product.find({
+      _id: { $in: productIds },
+      $expr: { $lte: ['$currentStock', '$minimumStock'] }
+    }).select('name currentStock minimumStock unit');
+
+    if (lowStockProducts.length > 0) {
+      if (lowStockProducts.length === 1) {
+        const p = lowStockProducts[0];
+        await sendPushNotification({
+          title: `🚨 Low Stock: ${p.name}`,
+          body: `⚠️ ${p.name} stock has fallen to ${p.currentStock} ${p.unit || 'units'} (Min: ${p.minimumStock}). Tap to review.`,
+          url: '/alerts'
+        });
+      } else {
+        const summary = lowStockProducts
+          .slice(0, 3)
+          .map(p => `${p.name} (${p.currentStock})`)
+          .join(', ');
+        const extra = lowStockProducts.length > 3 ? ` +${lowStockProducts.length - 3} more` : '';
+        await sendPushNotification({
+          title: `🚨 ${lowStockProducts.length} Products Low in Stock!`,
+          body: `⚠️ ${summary}${extra} are at or below minimum threshold. Tap to review.`,
+          url: '/alerts'
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to trigger low stock push notification:', err.message);
+  }
+};
 
 // @desc    Get sales with pagination and filtering
 // @route   GET /api/sales
@@ -282,6 +318,11 @@ const createSale = async (req, res) => {
       return sale;
     });
 
+    // Check if any sold item's stock reached or went below minimum threshold
+    checkAndNotifyLowStock(validatedItems.map(i => i.productId)).catch(err =>
+      console.error('Low stock push check error:', err)
+    );
+
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     console.error('createSale error:', error);
@@ -420,6 +461,11 @@ const updateSale = async (req, res) => {
       await oldSale.save(opts);
       return oldSale;
     });
+
+    // Check if any updated item's stock is low
+    checkAndNotifyLowStock(validatedItems.map(i => i.productId)).catch(err =>
+      console.error('Low stock push check error:', err)
+    );
 
     res.json({ success: true, data: result, message: 'Sale updated successfully' });
   } catch (error) {
