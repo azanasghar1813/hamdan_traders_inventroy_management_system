@@ -45,14 +45,7 @@ const SalesPage = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 25 });
-  const [summary, setSummary] = useState({
-    activeCount: 0,
-    cancelledCount: 0,
-    cancelledTotal: 0,
-    grandTotal: 0,
-    paid: 0,
-    remaining: 0
-  });
+
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [paymentModalData, setPaymentModalData] = useState(null);
@@ -94,16 +87,7 @@ const SalesPage = () => {
         if (!ignore) {
           setSales(res.data.data || []);
           if (res.data.pagination) setPagination(res.data.pagination);
-          if (res.data.summary) {
-            setSummary({
-              grandTotal: res.data.summary.totalSales || 0,
-              paid: res.data.summary.totalPaid || 0,
-              remaining: res.data.summary.totalRemaining || 0,
-              activeCount: res.data.summary.activeCount || 0,
-              cancelledTotal: res.data.summary.cancelledTotal || 0,
-              cancelledCount: res.data.summary.cancelledCount || 0
-            });
-          }
+
         }
       } catch (err) {
         if (!ignore) console.error(err);
@@ -230,39 +214,6 @@ const SalesPage = () => {
         </Link>
       </div>
 
-      {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Invoices</span>
-          <p className="text-xl font-bold text-gray-900 mt-1">{summary.activeCount}</p>
-          <span className="text-[10px] text-gray-400">Total matched</span>
-        </div>
-        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Sales</span>
-          <p className="text-xl font-bold text-blue-900 mt-1">Rs. {summary.grandTotal.toLocaleString()}</p>
-          <span className="text-[10px] text-gray-400">Active only</span>
-        </div>
-        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-semibold text-green-600 uppercase tracking-wider">Total Paid</span>
-          <p className="text-xl font-bold text-green-900 mt-1">Rs. {summary.paid.toLocaleString()}</p>
-          <span className="text-[10px] text-gray-400">Received</span>
-        </div>
-        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-gray-200">
-          <span className="text-xs font-semibold text-yellow-600 uppercase tracking-wider">Total Remaining</span>
-          <p className="text-xl font-bold text-yellow-900 mt-1">Rs. {summary.remaining.toLocaleString()}</p>
-          <span className="text-[10px] text-gray-400">Outstanding</span>
-        </div>
-        <div className="bg-white p-3.5 rounded-lg shadow-sm border border-red-200">
-          <div className="flex justify-between items-start">
-            <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">Cancelled Sales</span>
-            <span className="px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">
-              {summary.cancelledCount}
-            </span>
-          </div>
-          <p className="text-xl font-bold text-red-700 mt-1">Rs. {summary.cancelledTotal.toLocaleString()}</p>
-          <span className="text-[10px] text-red-400">Excluded from sales</span>
-        </div>
-      </div>
 
       {/* Filter & Sorting Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">

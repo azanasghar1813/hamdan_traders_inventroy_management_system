@@ -25,17 +25,17 @@ const MainLayout = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 overflow-hidden print:h-auto print:overflow-visible print:bg-white">
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 md:hidden"
+          className="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 md:hidden print:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`print:hidden fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800">
           <h1 className="text-xl font-bold text-white">Hamdan Traders</h1>
           <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setIsMobileMenuOpen(false)}>
@@ -81,9 +81,9 @@ const MainLayout = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 print:block">
         {/* Top Header */}
-        <header className="h-16 bg-white shadow-sm flex items-center px-4 md:px-6">
+        <header className="print:hidden h-16 bg-white shadow-sm flex items-center px-4 md:px-6">
           <button
             className="md:hidden mr-4 text-gray-500 hover:text-gray-700"
             onClick={() => setIsMobileMenuOpen(true)}
@@ -96,7 +96,7 @@ const MainLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 print:p-0 print:m-0 print:overflow-visible print:bg-white">
           <Outlet />
         </main>
       </div>

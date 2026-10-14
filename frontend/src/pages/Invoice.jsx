@@ -11,10 +11,10 @@ const Invoice = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Determine if it's a sale or purchase invoice based on the URL path
   const isSale = location.pathname.includes('/sale/');
-  
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(null); // 'pdf' or 'image' or null
@@ -56,16 +56,16 @@ const Invoice = () => {
   const handleShare = async (type) => {
     if (isSharing) return; // Prevent double clicks
     setIsSharing(type);
-    
+
     const element = document.getElementById('printable-invoice');
     if (!element) {
       setIsSharing(null);
       return;
     }
-    
+
     try {
       const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      
+
       let file;
       if (type === 'image') {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -118,30 +118,30 @@ const Invoice = () => {
     <div className="max-w-xl mx-auto mb-10 print:mb-0 print:max-w-none print:w-full">
       {/* Controls (Hidden during print) */}
       <div className="flex justify-between items-center mb-6 print:hidden">
-        <button 
-          onClick={() => navigate(-1)} 
+        <button
+          onClick={() => navigate(-1)}
           className="text-gray-600 hover:text-gray-900 flex items-center font-medium"
         >
           <FiArrowLeft className="mr-2" /> Back
         </button>
         <div className="flex flex-wrap justify-end gap-2">
-          <button 
+          <button
             onClick={() => handleShare('pdf')}
             disabled={isSharing !== null}
             className="flex px-3 py-2 bg-red-600 text-white rounded-md shadow-sm hover:bg-red-700 items-center text-sm sm:text-base disabled:opacity-70 disabled:cursor-wait"
           >
-            <FiShare2 className={`mr-1 ${isSharing === 'pdf' ? 'animate-spin' : ''}`} /> 
+            <FiShare2 className={`mr-1 ${isSharing === 'pdf' ? 'animate-spin' : ''}`} />
             {isSharing === 'pdf' ? 'Wait...' : 'PDF'}
           </button>
-          <button 
+          <button
             onClick={() => handleShare('image')}
             disabled={isSharing !== null}
             className="flex px-3 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 items-center text-sm sm:text-base disabled:opacity-70 disabled:cursor-wait"
           >
-            <FiShare2 className={`mr-1 ${isSharing === 'image' ? 'animate-spin' : ''}`} /> 
+            <FiShare2 className={`mr-1 ${isSharing === 'image' ? 'animate-spin' : ''}`} />
             {isSharing === 'image' ? 'Wait...' : 'Image'}
           </button>
-          <button 
+          <button
             onClick={handlePrint}
             disabled={isSharing !== null}
             className="flex px-3 py-2 bg-gray-800 text-white rounded-md shadow-sm hover:bg-gray-900 items-center text-sm sm:text-base disabled:opacity-50"
@@ -154,214 +154,252 @@ const Invoice = () => {
       {/* Printable Area Wrapper for Mobile scroll (Hidden during Print) */}
       <div className="overflow-x-auto w-full pb-4 print:hidden">
         <div id="printable-invoice" className="bg-white p-2 sm:p-6 rounded-lg shadow-sm border border-gray-200 w-full min-w-0">
-        
-        {/* Header */}
-        <div className="flex flex-row justify-between items-start border-b-2 border-yellow-500 pb-3 mb-4">
-          {/* Text on Left */}
-          <div className="flex flex-col justify-center text-left w-auto mt-0">
-            <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-wide">HAMDAN TRADERS</h2>
-            <p className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Frozen Items Supplier</p>
-            <p className="text-[10px] sm:text-xs italic font-medium text-yellow-600 mb-1">Behtareen Taste, Hamesha Aapke Sath!</p>
-            
-            <p className="text-xs sm:text-sm font-bold text-gray-800 mt-1">📞 0319-2828305 | 0300-2970372</p>
-            <p className="text-xs sm:text-sm font-bold text-red-600">Only Delivery Available</p>
+
+          {/* Header */}
+          <div className="flex flex-row justify-between items-start border-b-2 border-yellow-500 pb-3 mb-4">
+            {/* Text on Left */}
+            <div className="flex flex-col justify-center text-left w-auto mt-0">
+              <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-wide">HAMDAN TRADERS</h2>
+              <p className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Frozen Items Supplier</p>
+              <p className="text-[10px] sm:text-xs italic font-medium text-yellow-600 mb-1">Behtareen Taste, Hamesha Aapke Sath!</p>
+
+              <p className="text-xs sm:text-sm font-bold text-gray-800 mt-1">📞 0319-2828305 | 0300-2970372</p>
+              <p className="text-xs sm:text-sm font-bold text-red-600">Only Delivery Available</p>
+            </div>
+
+            {/* Logo on Right */}
+            <div className="flex justify-end w-auto">
+              <img src="/logo.png" alt="Hamdan Traders" className="h-16 sm:h-24 object-contain" />
+            </div>
           </div>
-          
-          {/* Logo on Right */}
-          <div className="flex justify-end w-auto">
-            <img src="/logo.png" alt="Hamdan Traders" className="h-16 sm:h-24 object-contain" />
+
+          {/* Info Section */}
+          <div className="flex flex-row justify-between mb-4 gap-2">
+            <div>
+              <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">
+                {isSale ? 'Billed To' : 'Supplier'}
+              </h3>
+              <p className="text-sm sm:text-lg font-bold text-gray-900">{partyName || 'Cash / Walk-in'}</p>
+              {partyPhone && <p className="text-xs sm:text-sm text-gray-600 mt-1">Phone: {partyPhone}</p>}
+              {partyAddress && <p className="text-xs sm:text-sm text-gray-600 whitespace-pre-wrap">{partyAddress}</p>}
+            </div>
+            <div className="text-right">
+              <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">Details</h3>
+              <p className="text-xs sm:text-sm text-gray-900 mb-1">
+                <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Invoice #:</span>
+                {invoiceNumber}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-900 mb-1">
+                <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Date:</span>
+                {format(new Date(data.date), 'dd MMM, yyyy')}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-900 mb-1">
+                <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Status:</span>
+                <span className={`font-bold ${data.status === 'PAID' ? 'text-green-600' : data.status === 'PARTIAL' ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {data.status}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="mb-4">
+            <table className="w-full text-left border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100 border-b-2 border-gray-400">
+                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center w-8 sm:w-12">#</th>
+                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Item</th>
+                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center">Qty</th>
+                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Price</th>
+                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item, index) => (
+                  <tr key={index} className="border-b border-gray-300">
+                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-center">{index + 1}</td>
+                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300">
+                      <p className="text-xs sm:text-sm font-bold text-gray-900">{item.productId?.name || 'Unknown Product'}</p>
+                    </td>
+                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-center">{item.quantity}</td>
+                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-right">
+                      {(isSale ? item.price : item.cost)?.toLocaleString()}
+                    </td>
+                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-right">
+                      {(((isSale ? item.price : item.cost) || 0) * item.quantity).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div className="flex justify-end">
+            <div className="w-[65%] sm:w-72">
+              <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Subtotal:</span>
+                <span className="text-xs sm:text-sm font-bold text-gray-900">Rs. {data.subtotal?.toLocaleString()}</span>
+              </div>
+              {data.discount > 0 && (
+                <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
+                  <span className="text-xs sm:text-sm font-medium text-gray-600">Discount:</span>
+                  <span className="text-xs sm:text-sm font-bold text-red-600">- Rs. {data.discount?.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-1 sm:py-2 border-b-2 border-gray-800">
+                <span className="text-sm sm:text-lg font-bold text-gray-900">Grand Total:</span>
+                <span className="text-sm sm:text-lg font-bold text-gray-900">Rs. {data.grandTotal?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-gray-200 mt-1 sm:mt-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Amount Paid:</span>
+                <span className="text-xs sm:text-sm font-bold text-green-600">Rs. {data.paid?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-xs sm:text-sm font-bold text-gray-900">Balance:</span>
+                <span className={`text-xs sm:text-sm font-bold ${data.remaining > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                  Rs. {data.remaining?.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-6 pt-4 border-t-2 border-yellow-500 text-center">
+            <p className="text-md font-bold text-gray-800 mb-1 italic">Behtareen Taste, Hamesha Aapke Sath!</p>
+            <p className="text-xs text-gray-500">Thank you for your business. For queries, please contact the numbers above.</p>
           </div>
         </div>
+      </div>
 
-        {/* Info Section */}
-        <div className="flex flex-row justify-between mb-4 gap-2">
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">
-              {isSale ? 'Billed To' : 'Supplier'}
-            </h3>
-            <p className="text-sm sm:text-lg font-bold text-gray-900">{partyName || 'Cash / Walk-in'}</p>
-            {partyPhone && <p className="text-xs sm:text-sm text-gray-600 mt-1">Phone: {partyPhone}</p>}
-            {partyAddress && <p className="text-xs sm:text-sm text-gray-600 whitespace-pre-wrap">{partyAddress}</p>}
+      {/* Thermal Printer Receipt Engine (Visible only during print) */}
+      <div 
+        className="hidden print:block text-black bg-white" 
+        style={{ 
+          fontFamily: "'Courier New', Courier, monospace", 
+          width: '74mm', 
+          maxWidth: '74mm', 
+          margin: '0 auto', 
+          padding: '1mm 2mm',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Header */}
+        <div className="text-center mb-3">
+          <h2 className="text-xl font-black uppercase tracking-wider mb-1" style={{ letterSpacing: '0.04em' }}>
+            HAMDAN TRADERS
+          </h2>
+          <p className="font-bold text-xs uppercase tracking-widest mb-1">
+            FROZEN ITEMS SUPPLIER
+          </p>
+          <p className="text-xs font-semibold mb-0.5">
+            0319-2828305 | 0300-2970372
+          </p>
+          <p className="text-[11px] font-bold tracking-wider uppercase">
+            *** ONLY DELIVERY AVAILABLE ***
+          </p>
+        </div>
+
+        {/* Invoice & Party Metadata */}
+        <div className="border-t-2 border-b-2 border-black py-2 mb-3 text-xs leading-relaxed">
+          <div className="flex justify-between mb-1">
+            <span className="font-semibold">{isSale ? 'Invoice #:' : 'Purchase #:'}</span>
+            <span className="font-bold text-sm tracking-wider">{invoiceNumber}</span>
           </div>
-          <div className="text-right">
-            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">Details</h3>
-            <p className="text-xs sm:text-sm text-gray-900 mb-1">
-              <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Invoice #:</span> 
-              {invoiceNumber}
-            </p>
-            <p className="text-xs sm:text-sm text-gray-900 mb-1">
-              <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Date:</span> 
-              {format(new Date(data.date), 'dd MMM, yyyy')}
-            </p>
-            <p className="text-xs sm:text-sm text-gray-900 mb-1">
-              <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Status:</span> 
-              <span className={`font-bold ${data.status === 'PAID' ? 'text-green-600' : data.status === 'PARTIAL' ? 'text-yellow-600' : 'text-red-600'}`}>
-                {data.status}
-              </span>
-            </p>
+          <div className="flex justify-between mb-1">
+            <span className="font-semibold">Date:</span>
+            <span className="font-bold">{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
           </div>
+          <div className="border-t border-dashed border-gray-400 my-1.5" />
+          <div className="flex justify-between items-start mb-1">
+            <span className="font-semibold shrink-0 mr-2">{isSale ? 'Customer:' : 'Supplier:'}</span>
+            <span className="font-bold text-right leading-tight break-words">{partyName || 'Cash / Walk-in'}</span>
+          </div>
+          {partyPhone && (
+            <div className="flex justify-between items-center mb-1">
+              <span className="font-semibold">Phone:</span>
+              <span className="font-bold">{partyPhone}</span>
+            </div>
+          )}
+          {partyAddress && (
+            <div className="flex justify-between items-start mb-1">
+              <span className="font-semibold shrink-0 mr-2">Address:</span>
+              <span className="text-right text-[11px] leading-tight break-words">{partyAddress}</span>
+            </div>
+          )}
         </div>
 
         {/* Items Table */}
-        <div className="mb-4">
-          <table className="w-full text-left border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100 border-b-2 border-gray-400">
-                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center w-8 sm:w-12">#</th>
-                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Item</th>
-                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center">Qty</th>
-                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Price</th>
-                <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((item, index) => (
-                <tr key={index} className="border-b border-gray-300">
-                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-center">{index + 1}</td>
-                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300">
-                    <p className="text-xs sm:text-sm font-bold text-gray-900">{item.productId?.name || 'Unknown Product'}</p>
+        <table className="w-full mb-3 text-xs text-left border-collapse">
+          <thead>
+            <tr className="border-b-2 border-black">
+              <th className="py-1 text-left font-bold uppercase" style={{ width: '48%' }}>Item</th>
+              <th className="py-1 text-center font-bold uppercase" style={{ width: '22%' }}>Qty</th>
+              <th className="py-1 text-right font-bold uppercase" style={{ width: '30%' }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((item, index) => {
+              const price = isSale ? item.price : item.cost;
+              const total = (price || 0) * item.quantity;
+              return (
+                <tr key={index} className="border-b border-gray-300 border-dashed">
+                  <td className="py-1.5 pr-1 align-top text-left">
+                    <div className="font-bold leading-tight">{item.productId?.name || 'Unknown Product'}</div>
+                    <div className="text-[10px] text-gray-700 mt-0.5">@ Rs. {price?.toLocaleString()}</div>
                   </td>
-                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-center">{item.quantity}</td>
-                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-right">
-                    {(isSale ? item.price : item.cost)?.toLocaleString()}
+                  <td className="py-1.5 align-top text-center font-bold">
+                    {item.quantity} {item.productId?.unit ? <span className="text-[10px] font-normal">{item.productId.unit}</span> : ''}
                   </td>
-                  <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-right">
-                    {(((isSale ? item.price : item.cost) || 0) * item.quantity).toLocaleString()}
+                  <td className="py-1.5 align-top text-right font-bold">
+                    {total.toLocaleString()}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </table>
 
-        {/* Totals */}
-        <div className="flex justify-end">
-          <div className="w-[65%] sm:w-72">
-            <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
-              <span className="text-xs sm:text-sm font-medium text-gray-600">Subtotal:</span>
-              <span className="text-xs sm:text-sm font-bold text-gray-900">Rs. {data.subtotal?.toLocaleString()}</span>
+        {/* Totals Section */}
+        <div className="border-t-2 border-black pt-2 mb-3 text-xs">
+          <div className="flex justify-between mb-1">
+            <span className="font-semibold">Subtotal:</span>
+            <span>Rs. {data.subtotal?.toLocaleString()}</span>
+          </div>
+          {data.discount > 0 && (
+            <div className="flex justify-between mb-1">
+              <span className="font-semibold">Discount:</span>
+              <span>- Rs. {data.discount?.toLocaleString()}</span>
             </div>
-            {data.discount > 0 && (
-              <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
-                <span className="text-xs sm:text-sm font-medium text-gray-600">Discount:</span>
-                <span className="text-xs sm:text-sm font-bold text-red-600">- Rs. {data.discount?.toLocaleString()}</span>
-              </div>
-            )}
-            <div className="flex justify-between py-1 sm:py-2 border-b-2 border-gray-800">
-              <span className="text-sm sm:text-lg font-bold text-gray-900">Grand Total:</span>
-              <span className="text-sm sm:text-lg font-bold text-gray-900">Rs. {data.grandTotal?.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-gray-200 mt-1 sm:mt-2">
-              <span className="text-xs sm:text-sm font-medium text-gray-600">Amount Paid:</span>
-              <span className="text-xs sm:text-sm font-bold text-green-600">Rs. {data.paid?.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-xs sm:text-sm font-bold text-gray-900">Balance:</span>
-              <span className={`text-xs sm:text-sm font-bold ${data.remaining > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                Rs. {data.remaining?.toLocaleString()}
-              </span>
-            </div>
+          )}
+          <div className="flex justify-between items-center font-black text-sm my-1.5 border-t-2 border-b-2 border-black py-1.5">
+            <span className="text-sm font-extrabold tracking-wider">TOTAL:</span>
+            <span className="text-base font-extrabold">Rs. {data.grandTotal?.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between mb-1">
+            <span className="font-semibold">Paid:</span>
+            <span>Rs. {data.paid?.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between font-bold border-t border-dashed border-gray-400 pt-1.5 mb-2">
+            <span>Balance:</span>
+            <span>Rs. {data.remaining?.toLocaleString()}</span>
+          </div>
+
+          {/* Payment Status Tag */}
+          <div className="text-center my-2">
+            <span className="inline-block border-2 border-black font-extrabold text-[11px] px-3 py-0.5 tracking-widest uppercase">
+              *** {data.status === 'PAID' ? 'PAID IN FULL' : data.status === 'PARTIAL' ? 'PARTIALLY PAID' : 'PAYMENT DUE'} ***
+            </span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t-2 border-yellow-500 text-center">
-          <p className="text-md font-bold text-gray-800 mb-1 italic">Behtareen Taste, Hamesha Aapke Sath!</p>
-          <p className="text-xs text-gray-500">Thank you for your business. For queries, please contact the numbers above.</p>
+        <div className="text-center mt-4 pt-2 border-t border-dashed border-black text-xs space-y-1">
+          <p className="font-bold italic text-xs">Behtareen Taste, Hamesha Aapke Sath!</p>
+          <p className="text-[11px]">Thank you for your business.</p>
+          <p className="text-[9px] text-gray-600 mt-2">-- Powered By: www.corevex.tech --</p>
         </div>
       </div>
-      </div>
-
-      {/* Thermal Printer Receipt Engine (Visible only during print) */}
-      <div className="hidden print:block max-w-full mx-auto text-black bg-white" style={{ fontFamily: "'Courier New', Courier, monospace", width: '80mm' }}>
-          {/* Header */}
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold font-sans uppercase mb-1">Hamdan Traders</h2>
-            <p className="font-bold text-sm mb-1 uppercase">Frozen Items Supplier</p>
-            <p className="text-xs mb-1">0319-2828305 | 0300-2970372</p>
-            <p className="text-xs font-bold uppercase">Only Delivery Available</p>
-          </div>
-
-          <div className="border-t-2 border-b-2 border-black py-2 mb-4 text-sm">
-            <div className="flex justify-between mb-1">
-              <span>Invoice #:</span>
-              <span className="font-bold">{invoiceNumber}</span>
-            </div>
-            <div className="flex justify-between mb-1">
-              <span>Date:</span>
-              <span className="font-bold">{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
-            </div>
-            <div className="flex justify-between mb-1 mt-2 pt-2 border-t border-dashed border-gray-400">
-              <span>{isSale ? 'Customer:' : 'Supplier:'}</span>
-              <span className="font-bold text-right">{partyName || 'Cash / Walk-in'}</span>
-            </div>
-            {partyPhone && (
-              <div className="flex justify-between">
-                <span>Phone:</span>
-                <span className="font-bold">{partyPhone}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Items Table */}
-          <table className="w-full mb-4 text-sm text-left border-collapse">
-            <thead>
-              <tr className="border-b-2 border-black">
-                <th className="py-1">Item</th>
-                <th className="py-1 text-center w-12">Qty</th>
-                <th className="py-1 text-right w-20">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((item, index) => {
-                const price = isSale ? item.price : item.cost;
-                const total = (price || 0) * item.quantity;
-                return (
-                  <tr key={index} className="border-b border-gray-400 border-dashed">
-                    <td className="py-2 pr-1 align-top">
-                      <div className="font-bold">{item.productId?.name || 'Unknown Product'}</div>
-                      <div className="text-xs mt-1">@ {price?.toLocaleString()}</div>
-                    </td>
-                    <td className="py-2 align-top text-center font-bold">{item.quantity}</td>
-                    <td className="py-2 align-top text-right font-bold">{total.toLocaleString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {/* Totals */}
-          <div className="border-t-2 border-black pt-2 mb-4 text-sm">
-            <div className="flex justify-between mb-1">
-              <span>Subtotal:</span>
-              <span>Rs. {data.subtotal?.toLocaleString()}</span>
-            </div>
-            {data.discount > 0 && (
-              <div className="flex justify-between mb-1">
-                <span>Discount:</span>
-                <span>- Rs. {data.discount?.toLocaleString()}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold text-lg my-2 border-t-2 border-black pt-2 border-b-2 pb-2">
-              <span>TOTAL:</span>
-              <span>Rs. {data.grandTotal?.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between mb-1">
-              <span>Paid:</span>
-              <span>Rs. {data.paid?.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between font-bold border-t border-dashed border-gray-400 pt-1 mt-1">
-              <span>Balance:</span>
-              <span>Rs. {data.remaining?.toLocaleString()}</span>
-            </div>
-          </div>
-          {/* Footer */}
-          <div className="text-center mt-6 text-sm">
-            <p className="font-bold mb-1 italic">Behtareen Taste, Hamesha Aapke Sath!</p>
-            <p className="mb-2">Thank you for your business.</p>
-            <p className="text-[10px] mt-4">--- System Generated Receipt ---</p>
-          </div>
-        </div>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { FiTrash2 } from 'react-icons/fi';
+import { FiTrash2, FiArrowLeft } from 'react-icons/fi';
 import SelectOrTypeInput from '../components/SelectOrTypeInput';
 
 const NewSalePage = () => {
@@ -113,12 +113,31 @@ const NewSalePage = () => {
     }
   };
 
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/sales');
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">New Sale Invoice</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Enter sale details to generate invoice</p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors border border-gray-200 shadow-2xs cursor-pointer"
+            title="Go back to Sales"
+            aria-label="Back"
+          >
+            <FiArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">New Sale Invoice</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Enter sale details to generate invoice</p>
+          </div>
         </div>
         {nextNumberInfo && (
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm font-semibold shadow-xs">
