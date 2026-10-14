@@ -129,12 +129,8 @@ const SuppliersPage = () => {
     setHistorySupplier(supplier);
     setLoadingHistory(true);
     try {
-      const { data } = await api.get('/purchases');
-      const purchasesForSupplier = data.data.filter(p => {
-        const id = p.supplierId?._id || p.supplierId;
-        return id === supplier._id;
-      });
-      setSupplierPurchases(purchasesForSupplier);
+      const { data } = await api.get(`/purchases?supplierId=${supplier._id}`);
+      setSupplierPurchases(data.data || []);
     } catch (err) {
       console.error(err);
       alert('Error loading purchases history for this supplier');

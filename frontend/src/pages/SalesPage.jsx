@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useViewPreference from '../hooks/useViewPreference';
@@ -18,7 +18,7 @@ import {
   FiX, 
   FiCalendar 
 } from 'react-icons/fi';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
 const SalesPage = () => {
   const navigate = useNavigate();
@@ -41,37 +41,69 @@ const SalesPage = () => {
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 25 });
+  const [summary, setSummary] = useState({
+    activeCount: 0,
+    cancelledCount: 0,
+    cancelledTotal: 0,
+    grandTotal: 0,
+    paid: 0,
+    remaining: 0
+  });
+
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [paymentModalData, setPaymentModalData] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
 
-  const fetchSalesAndCustomers = async () => {
-    try {
-      const [salesRes, custRes] = await Promise.all([
-        api.get('/sales'),
-        api.get('/customers')
-      ]);
-      setSales(salesRes.data.data);
-      setCustomers(custRes.data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch customers once
+  useEffect(() => {
+    let ignore = false;
+    api.get('/customers')
+      .then((res) => {
+        if (!ignore) setCustomers(res.data.data || []);
+      })
+      .catch((err) => {
+        if (!ignore) console.error(err);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
+  // Fetch paginated sales from server
   useEffect(() => {
     let ignore = false;
     const load = async () => {
       try {
-        const [salesRes, custRes] = await Promise.all([
-          api.get('/sales'),
-          api.get('/customers')
-        ]);
+        const params = new URLSearchParams();
+        params.set('page', page);
+        params.set('limit', limit);
+        if (searchQuery.trim()) params.set('search', searchQuery.trim());
+        if (selectedCustomerId) params.set('customerId', selectedCustomerId);
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        params.set('sortField', sortField);
+        params.set('sortOrder', sortOrder);
+
+        const res = await api.get(`/sales?${params.toString()}`);
         if (!ignore) {
-          setSales(salesRes.data.data);
-          setCustomers(custRes.data.data);
+          setSales(res.data.data || []);
+          if (res.data.pagination) setPagination(res.data.pagination);
+          if (res.data.summary) {
+            setSummary({
+              grandTotal: res.data.summary.totalSales || 0,
+              paid: res.data.summary.totalPaid || 0,
+              remaining: res.data.summary.totalRemaining || 0,
+              activeCount: res.data.summary.activeCount || 0,
+              cancelledTotal: res.data.summary.cancelledTotal || 0,
+              cancelledCount: res.data.summary.cancelledCount || 0
+            });
+          }
         }
       } catch (err) {
         if (!ignore) console.error(err);
@@ -79,11 +111,12 @@ const SalesPage = () => {
         if (!ignore) setLoading(false);
       }
     };
+
     load();
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [page, limit, searchQuery, selectedCustomerId, startDate, endDate, sortField, sortOrder, refreshTrigger]);
 
   const handleToggleCancel = async (sale) => {
     const action = sale.isCancelled ? 'restore' : 'cancel';
@@ -91,7 +124,7 @@ const SalesPage = () => {
       setTogglingId(sale._id);
       try {
         await api.put(`/sales/${sale._id}/toggle-cancel`);
-        await fetchSalesAndCustomers();
+        setRefreshTrigger((prev) => prev + 1);
       } catch (err) {
         alert(err.response?.data?.message || `Error trying to ${action} sale`);
       } finally {
@@ -111,7 +144,7 @@ const SalesPage = () => {
     try {
       await api.post(`/sales/${paymentModalData._id}/payment`, { amount: paymentAmount });
       setPaymentModalData(null);
-      await fetchSalesAndCustomers();
+      setRefreshTrigger((prev) => prev + 1);
     } catch (err) {
       alert(err.response?.data?.message || 'Error processing payment');
     } finally {
@@ -121,6 +154,7 @@ const SalesPage = () => {
 
   // Quick Date Presets
   const handleDatePreset = (preset) => {
+    setPage(1);
     const today = new Date();
     if (preset === 'TODAY') {
       const formatted = format(today, 'yyyy-MM-dd');
@@ -140,6 +174,7 @@ const SalesPage = () => {
 
   // Toggle Sorting
   const handleSort = (field) => {
+    setPage(1);
     if (sortField === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
@@ -153,6 +188,7 @@ const SalesPage = () => {
     setSelectedCustomerId('');
     setStartDate('');
     setEndDate('');
+    setPage(1);
     setSearchParams({});
   };
 
@@ -160,95 +196,8 @@ const SalesPage = () => {
     searchQuery || selectedCustomerId || startDate || endDate
   );
 
-  // Filtered and Sorted Sales Memo
-  const filteredSales = useMemo(() => {
-    return sales
-      .filter((sale) => {
-        // Customer filter
-        if (selectedCustomerId) {
-          const custId = sale.customerId?._id || sale.customerId;
-          if (custId !== selectedCustomerId) return false;
-        }
-
-        // Search query (invoice # or customer name)
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim();
-          const invMatch = sale.invoiceNumber?.toLowerCase().includes(q);
-          const custMatch = sale.customerId?.name?.toLowerCase().includes(q);
-          if (!invMatch && !custMatch) return false;
-        }
-
-        // Date range filter
-        if (startDate || endDate) {
-          const saleDate = new Date(sale.date);
-          if (startDate) {
-            const start = startOfDay(new Date(startDate));
-            if (saleDate < start) return false;
-          }
-          if (endDate) {
-            const end = endOfDay(new Date(endDate));
-            if (saleDate > end) return false;
-          }
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        let valA, valB;
-        if (sortField === 'date') {
-          valA = new Date(a.date).getTime();
-          valB = new Date(b.date).getTime();
-        } else if (sortField === 'invoiceNumber') {
-          valA = a.invoiceNumber || '';
-          valB = b.invoiceNumber || '';
-        } else if (sortField === 'customer') {
-          valA = (a.customerId?.name || '').toLowerCase();
-          valB = (b.customerId?.name || '').toLowerCase();
-        } else if (sortField === 'total') {
-          valA = Number(a.grandTotal || 0);
-          valB = Number(b.grandTotal || 0);
-        } else if (sortField === 'paid') {
-          valA = Number(a.paid || 0);
-          valB = Number(b.paid || 0);
-        } else if (sortField === 'remaining') {
-          valA = Number(a.remaining || 0);
-          valB = Number(b.remaining || 0);
-        }
-
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-  }, [sales, selectedCustomerId, searchQuery, startDate, endDate, sortField, sortOrder]);
-
-  // Summary Metrics for filtered sales
-  const summary = useMemo(() => {
-    let grandTotal = 0;
-    let paid = 0;
-    let remaining = 0;
-    let cancelledCount = 0;
-    let cancelledTotal = 0;
-
-    filteredSales.forEach((s) => {
-      if (s.isCancelled) {
-        cancelledCount += 1;
-        cancelledTotal += Number(s.grandTotal || 0);
-      } else {
-        grandTotal += Number(s.grandTotal || 0);
-        paid += Number(s.paid || 0);
-        remaining += Number(s.remaining || 0);
-      }
-    });
-
-    return {
-      activeCount: filteredSales.filter(s => !s.isCancelled).length,
-      cancelledCount,
-      cancelledTotal,
-      grandTotal,
-      paid,
-      remaining
-    };
-  }, [filteredSales]);
+  // Display sales returned by server for current page
+  const filteredSales = sales;
 
   // Render Sort Header Indicator
   const renderSortIndicator = (field) => {
@@ -685,6 +634,70 @@ const SalesPage = () => {
           />
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {pagination.total > 0 && (
+        <div className="bg-white rounded-lg shadow px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 border border-gray-100">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            <span>
+              Showing <span className="font-semibold text-gray-800">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+              <span className="font-semibold text-gray-800">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{' '}
+              <span className="font-semibold text-gray-800">{pagination.total}</span> invoices
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-gray-200 pl-3">
+              <label className="text-gray-400">Per page:</label>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)}
+              disabled={pagination.page <= 1}
+              className="px-2.5 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 font-medium"
+              title="First Page"
+            >
+              «
+            </button>
+            <button
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={pagination.page <= 1}
+              className="px-3 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 font-medium"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1 text-xs font-semibold text-blue-600 bg-blue-50 rounded border border-blue-200">
+              Page {pagination.page} of {pagination.totalPages || 1}
+            </span>
+            <button
+              onClick={() => setPage((prev) => Math.min(pagination.totalPages || 1, prev + 1))}
+              disabled={pagination.page >= (pagination.totalPages || 1)}
+              className="px-3 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 font-medium"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setPage(pagination.totalPages || 1)}
+              disabled={pagination.page >= (pagination.totalPages || 1)}
+              className="px-2.5 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 font-medium"
+              title="Last Page"
+            >
+              »
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Payment Modal */}
       {paymentModalData && (

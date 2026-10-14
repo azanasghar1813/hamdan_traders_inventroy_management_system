@@ -129,12 +129,8 @@ const CustomersPage = () => {
     setHistoryCustomer(customer);
     setLoadingHistory(true);
     try {
-      const { data } = await api.get('/sales');
-      const salesForCustomer = data.data.filter(s => {
-        const id = s.customerId?._id || s.customerId;
-        return id === customer._id;
-      });
-      setCustomerSales(salesForCustomer);
+      const { data } = await api.get(`/sales?customerId=${customer._id}`);
+      setCustomerSales(data.data || []);
     } catch (err) {
       console.error(err);
       alert('Error loading sales history for this customer');

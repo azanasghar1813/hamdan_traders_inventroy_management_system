@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const StockMovement = require('../models/StockMovement');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -43,9 +44,8 @@ const getProductById = async (req, res) => {
 // @access  Private
 const createProduct = async (req, res) => {
   try {
-    const { name, unit, purchasePrice, salePrice, minimumStock, expiryDate } = req.body;
-
-
+    const { name, unit, purchasePrice, salePrice, minimumStock, expiryDate, openingStock = 0 } = req.body;
+    const initialStock = Math.max(0, Number(openingStock) || 0);
 
     const product = await Product.create({
       name,
@@ -54,8 +54,21 @@ const createProduct = async (req, res) => {
       salePrice,
       minimumStock,
       expiryDate,
-      currentStock: 0 // New products always start at 0 stock, managed via stock movements
+      currentStock: initialStock
     });
+
+    if (initialStock > 0) {
+      try {
+        await StockMovement.create({
+          productId: product._id,
+          type: 'ADJUSTMENT',
+          quantity: initialStock,
+          reason: 'Initial Opening Stock'
+        });
+      } catch (smErr) {
+        console.error('Failed to log opening stock movement:', smErr);
+      }
+    }
 
     res.status(201).json({ success: true, data: product });
   } catch (error) {

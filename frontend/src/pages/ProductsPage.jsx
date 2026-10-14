@@ -19,11 +19,11 @@ const ProductsPage = () => {
   
   const [formData, setFormData] = useState({
     name: '',
-
     unit: 'Box',
     purchasePrice: '',
     salePrice: '',
     minimumStock: '',
+    openingStock: '',
     expiryDate: '',
     isActive: true
   });
@@ -69,10 +69,11 @@ const ProductsPage = () => {
       setEditingProduct(product);
       setFormData({
         name: product.name,
-
+        unit: product.unit || 'Box',
         purchasePrice: product.purchasePrice,
         salePrice: product.salePrice,
         minimumStock: product.minimumStock,
+        openingStock: '',
         expiryDate: product.expiryDate ? product.expiryDate.split('T')[0] : '',
         isActive: product.isActive
       });
@@ -80,8 +81,13 @@ const ProductsPage = () => {
       setEditingProduct(null);
       setFormData({
         name: '',
-        unit: 'Box', purchasePrice: '', salePrice: '', minimumStock: '',
-        expiryDate: '', isActive: true
+        unit: 'Box',
+        purchasePrice: '',
+        salePrice: '',
+        minimumStock: '',
+        openingStock: '',
+        expiryDate: '',
+        isActive: true
       });
     }
     setIsModalOpen(true);
@@ -422,6 +428,21 @@ const ProductsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
                   <input type="date" value={formData.expiryDate} onChange={e => setFormData({...formData, expiryDate: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
+                {!editingProduct && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Opening Stock <span className="text-xs text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.openingStock}
+                      onChange={e => setFormData({...formData, openingStock: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
                 <div className="flex items-end mb-2">
                   <div className="flex items-center h-5">
                     <input type="checkbox" checked={formData.isActive} onChange={e => setFormData({...formData, isActive: e.target.checked})} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />

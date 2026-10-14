@@ -5,20 +5,22 @@ const Product = require('../models/Product');
 // @access  Private
 const getAlerts = async (req, res) => {
   try {
-    // 1. Find Low Stock Products
+    // 1. Find Low Stock Products (Active and not deleted)
     const lowStockProducts = await Product.find({
       $expr: { $lte: ['$currentStock', '$minimumStock'] },
-      isActive: true
+      isActive: true,
+      isDeleted: { $ne: true }
     });
 
-    // 2. Find Expiring Products (within next 30 days) or already expired
+    // 2. Find Expiring Products (within next 30 days, not deleted) or already expired
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     const expiringProducts = await Product.find({
       expiryDate: { $ne: null, $lte: thirtyDaysFromNow },
       currentStock: { $gt: 0 },
-      isActive: true
+      isActive: true,
+      isDeleted: { $ne: true }
     }).sort({ expiryDate: 1 });
 
     res.json({

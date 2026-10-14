@@ -13,13 +13,14 @@ const getDashboardStats = async (req, res) => {
 
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    // 1. Total Products Count
-    const totalProducts = await Product.countDocuments({ isActive: true });
+    // 1. Total Products Count (Active & not deleted)
+    const totalProducts = await Product.countDocuments({ isActive: true, isDeleted: { $ne: true } });
 
-    // 2. Low Stock Count
+    // 2. Low Stock Count (Active & not deleted)
     const lowStockCount = await Product.countDocuments({
       $expr: { $lte: ['$currentStock', '$minimumStock'] },
-      isActive: true
+      isActive: true,
+      isDeleted: { $ne: true }
     });
 
     // 3. Today's Sales Total (Active only)
@@ -65,14 +66,15 @@ const getDashboardStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // 9. Low Stock Products
+    // 9. Low Stock Products (Active & not deleted)
     const lowStockProducts = await Product.find({
       $expr: { $lte: ['$currentStock', '$minimumStock'] },
-      isActive: true
+      isActive: true,
+      isDeleted: { $ne: true }
     }).limit(10);
 
-    // 10. All active products for stock cards
-    const allProductsStock = await Product.find({ isActive: true })
+    // 10. All active products for stock cards (not deleted)
+    const allProductsStock = await Product.find({ isActive: true, isDeleted: { $ne: true } })
       .select('name currentStock unit')
       .sort({ name: 1 });
 

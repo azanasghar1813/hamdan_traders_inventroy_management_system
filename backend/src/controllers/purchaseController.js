@@ -5,16 +5,143 @@ const StockMovement = require('../models/StockMovement');
 const { getNextSequence, peekNextSequence } = require('../models/Counter');
 const { runInTransaction } = require('../utils/transactionHelper');
 
-// @desc    Get all purchases
+// @desc    Get purchases with pagination and filtering
 // @route   GET /api/purchases
 // @access  Private
 const getPurchases = async (req, res) => {
   try {
-    const purchases = await Purchase.find({})
-      .populate('supplierId', 'name phone')
-      .sort({ createdAt: -1 });
+    const { page, limit, supplierId, search, startDate, endDate, sortField = 'date', sortOrder = 'desc', all } = req.query;
 
-    res.json({ success: true, data: purchases });
+    const filter = {};
+
+    if (supplierId) {
+      filter.supplierId = supplierId;
+    }
+
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        filter.date.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.date.$lte = end;
+      }
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      const matchingSuppliers = await Supplier.find({
+        $or: [
+          { name: { $regex: q, $options: 'i' } },
+          { phone: { $regex: q, $options: 'i' } }
+        ]
+      }).select('_id');
+      const suppIds = matchingSuppliers.map((s) => s._id);
+
+      filter.$or = [
+        { purchaseNumber: { $regex: q, $options: 'i' } },
+        { supplierId: { $in: suppIds } }
+      ];
+    }
+
+    const sortMap = {
+      date: 'date',
+      purchaseNumber: 'purchaseNumber',
+      total: 'grandTotal',
+      paid: 'paid',
+      remaining: 'remaining',
+      createdAt: 'createdAt'
+    };
+    const sortProp = sortMap[sortField] || 'date';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    const sortObj = { [sortProp]: sortDirection, _id: sortDirection };
+
+    // Compute Summary Totals across all matching records
+    const summaryAgg = await Purchase.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalPurchases: {
+            $sum: { $cond: [{ $eq: ['$isCancelled', true] }, 0, '$grandTotal'] }
+          },
+          totalPaid: {
+            $sum: { $cond: [{ $eq: ['$isCancelled', true] }, 0, '$paid'] }
+          },
+          totalRemaining: {
+            $sum: { $cond: [{ $eq: ['$isCancelled', true] }, 0, '$remaining'] }
+          },
+          activeCount: {
+            $sum: { $cond: [{ $eq: ['$isCancelled', true] }, 0, 1] }
+          },
+          cancelledTotal: {
+            $sum: { $cond: [{ $eq: ['$isCancelled', true] }, '$grandTotal', 0] }
+          },
+          cancelledCount: {
+            $sum: { $cond: [{ $eq: ['$isCancelled', true] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const summary = summaryAgg.length > 0 ? summaryAgg[0] : {
+      totalPurchases: 0,
+      totalPaid: 0,
+      totalRemaining: 0,
+      activeCount: 0,
+      cancelledTotal: 0,
+      cancelledCount: 0
+    };
+    delete summary._id;
+
+    // Check if pagination is requested
+    const isPaginated = (page !== undefined || limit !== undefined) && all !== 'true';
+
+    if (isPaginated) {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.max(1, parseInt(limit, 10) || 25);
+      const total = await Purchase.countDocuments(filter);
+      const totalPages = Math.ceil(total / limitNum) || 1;
+
+      const purchases = await Purchase.find(filter)
+        .populate('supplierId', 'name phone')
+        .sort(sortObj)
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum);
+
+      return res.json({
+        success: true,
+        data: purchases,
+        pagination: {
+          total,
+          page: pageNum,
+          totalPages,
+          limit: limitNum
+        },
+        summary
+      });
+    }
+
+    // Default or all=true: return full list (backward compatible)
+    const purchases = await Purchase.find(filter)
+      .populate('supplierId', 'name phone')
+      .sort(sortObj);
+
+    res.json({
+      success: true,
+      data: purchases,
+      pagination: {
+        total: purchases.length,
+        page: 1,
+        totalPages: 1,
+        limit: purchases.length
+      },
+      summary
+    });
   } catch (error) {
     console.error('getPurchases error:', error);
     res.status(500).json({ success: false, message: 'Failed to retrieve purchases' });
