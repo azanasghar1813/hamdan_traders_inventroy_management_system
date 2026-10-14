@@ -3,9 +3,6 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { FiPrinter, FiArrowLeft, FiShare2 } from 'react-icons/fi';
 import { format } from 'date-fns';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import html2canvas from 'html2canvas-pro';
 
 const Invoice = () => {
   const { id } = useParams();
@@ -17,7 +14,7 @@ const Invoice = () => {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isSharing, setIsSharing] = useState(null); // 'pdf' or 'image' or null
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -45,40 +42,36 @@ const Invoice = () => {
     window.print();
   };
 
-  if (loading) return <div className="text-center py-10">Loading invoice...</div>;
-  if (!data) return <div className="text-center py-10 text-red-500">Invoice not found.</div>;
+  if (loading) return <div className="text-center py-10 font-medium text-gray-600">Loading invoice...</div>;
+  if (!data) return <div className="text-center py-10 text-red-500 font-semibold">Invoice not found.</div>;
 
   const partyName = isSale ? data.customerId?.name : data.supplierId?.name;
   const partyPhone = isSale ? data.customerId?.phone : data.supplierId?.phone;
   const partyAddress = isSale ? data.customerId?.address : data.supplierId?.address;
   const invoiceNumber = isSale ? data.invoiceNumber : data.purchaseNumber;
 
-  const handleShare = async (type) => {
-    if (isSharing) return; // Prevent double clicks
-    setIsSharing(type);
+  const handleShare = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
 
     const element = document.getElementById('printable-invoice');
     if (!element) {
-      setIsSharing(null);
+      setIsSharing(false);
       return;
     }
 
     try {
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      // Lazy load html2canvas-pro only when user clicks to keep bundle ultra-fast
+      const html2canvas = (await import('html2canvas-pro')).default;
+      const canvas = await html2canvas(element, {
+        scale: 2.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
 
-      let file;
-      if (type === 'image') {
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        file = new File([blob], `${invoiceNumber}.png`, { type: 'image/png' });
-      } else {
-        const imgData = canvas.toDataURL('image/png');
-        const doc = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = doc.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        const pdfBlob = doc.output('blob');
-        file = new File([pdfBlob], `${invoiceNumber}.pdf`, { type: 'application/pdf' });
-      }
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const file = new File([blob], `${invoiceNumber}.png`, { type: 'image/png' });
 
       const triggerDownload = () => {
         const url = URL.createObjectURL(file);
@@ -94,337 +87,212 @@ const Invoice = () => {
           await navigator.share({
             files: [file],
             title: `Invoice ${invoiceNumber}`,
-            text: 'Here is your invoice.'
+            text: `Hamdan Traders Receipt ${invoiceNumber}`,
           });
         } catch (shareErr) {
-          // If share is aborted by user, do nothing. If it fails due to lost gesture, fallback to download.
           if (shareErr.name !== 'AbortError') {
             triggerDownload();
           }
         }
       } else {
-        // Fallback to traditional download
         triggerDownload();
       }
     } catch (error) {
-      console.error('Error sharing/exporting:', error);
-      alert('Failed to process ' + type + ' export: ' + error.message);
+      console.error('Error sharing image:', error);
+      alert('Failed to generate receipt image: ' + error.message);
     } finally {
-      setIsSharing(null);
+      setIsSharing(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto mb-10 print:mb-0 print:max-w-none print:w-full">
-      {/* Controls (Hidden during print) */}
-      <div className="flex justify-between items-center mb-6 print:hidden">
+    <div className="max-w-md mx-auto mb-10 print:mb-0 print:max-w-none print:w-full">
+      {/* Controls Bar (Hidden during print) */}
+      <div className="flex justify-between items-center mb-5 print:hidden">
         <button
           onClick={() => navigate(-1)}
-          className="text-gray-600 hover:text-gray-900 flex items-center font-medium"
+          className="text-gray-600 hover:text-gray-900 flex items-center font-medium text-sm transition-colors cursor-pointer"
         >
-          <FiArrowLeft className="mr-2" /> Back
+          <FiArrowLeft className="mr-1.5" /> Back
         </button>
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => handleShare('pdf')}
-            disabled={isSharing !== null}
-            className="flex px-3 py-2 bg-red-600 text-white rounded-md shadow-sm hover:bg-red-700 items-center text-sm sm:text-base disabled:opacity-70 disabled:cursor-wait"
+            onClick={handleShare}
+            disabled={isSharing}
+            className="flex px-3.5 py-1.5 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 items-center text-sm font-medium disabled:opacity-70 disabled:cursor-wait transition-all cursor-pointer"
           >
-            <FiShare2 className={`mr-1 ${isSharing === 'pdf' ? 'animate-spin' : ''}`} />
-            {isSharing === 'pdf' ? 'Wait...' : 'PDF'}
-          </button>
-          <button
-            onClick={() => handleShare('image')}
-            disabled={isSharing !== null}
-            className="flex px-3 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 items-center text-sm sm:text-base disabled:opacity-70 disabled:cursor-wait"
-          >
-            <FiShare2 className={`mr-1 ${isSharing === 'image' ? 'animate-spin' : ''}`} />
-            {isSharing === 'image' ? 'Wait...' : 'Image'}
+            <FiShare2 className={`mr-1.5 ${isSharing ? 'animate-spin' : ''}`} />
+            {isSharing ? 'Generating...' : 'Share / Image'}
           </button>
           <button
             onClick={handlePrint}
-            disabled={isSharing !== null}
-            className="flex px-3 py-2 bg-gray-800 text-white rounded-md shadow-sm hover:bg-gray-900 items-center text-sm sm:text-base disabled:opacity-50"
+            disabled={isSharing}
+            className="flex px-3.5 py-1.5 bg-gray-900 text-white rounded-md shadow-sm hover:bg-gray-800 items-center text-sm font-medium disabled:opacity-50 transition-all cursor-pointer"
           >
-            <FiPrinter className="mr-1" /> Print
+            <FiPrinter className="mr-1.5" /> Print
           </button>
         </div>
       </div>
 
-      {/* Printable Area Wrapper for Mobile scroll (Hidden during Print) */}
-      <div className="overflow-x-auto w-full pb-4 print:hidden">
-        <div id="printable-invoice" className="bg-white p-2 sm:p-6 rounded-lg shadow-sm border border-gray-200 w-full min-w-0">
-
+      {/* Unified Receipt Card (Used for Screen, Print, and Image Share) */}
+      <div className="overflow-x-auto w-full pb-6">
+        <div
+          id="printable-invoice"
+          className="bg-white mx-auto text-black p-5 sm:p-6 rounded-xl shadow-md border border-gray-200 print:border-none print:shadow-none print:p-0 print:rounded-none"
+          style={{
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            width: '100%',
+            maxWidth: '380px',
+            boxSizing: 'border-box',
+          }}
+        >
           {/* Header */}
-          <div className="flex flex-row justify-between items-start border-b-2 border-yellow-500 pb-3 mb-4">
-            {/* Text on Left */}
-            <div className="flex flex-col justify-center text-left w-auto mt-0">
-              <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-wide">HAMDAN TRADERS</h2>
-              <p className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Frozen Items Supplier</p>
-              <p className="text-[10px] sm:text-xs italic font-medium text-yellow-600 mb-1">Behtareen Taste, Hamesha Aapke Sath!</p>
-
-              <p className="text-xs sm:text-sm font-bold text-gray-800 mt-1">📞 0319-2828305 | 0300-2970372</p>
-              <p className="text-xs sm:text-sm font-bold text-red-600">Only Delivery Available</p>
-            </div>
-
-            {/* Logo on Right */}
-            <div className="flex justify-end w-auto">
-              <img src="/logo.png" alt="Hamdan Traders" className="h-16 sm:h-24 object-contain" />
-            </div>
+          <div className="text-center mb-3">
+            <h2 className="text-2xl font-black uppercase tracking-wide mb-1" style={{ letterSpacing: '0.03em' }}>
+              HAMDAN TRADERS
+            </h2>
+            <p className="text-xs font-normal mb-1">
+              0319-2828305 &nbsp;|&nbsp; 0300-2970372
+            </p>
+            <p className="text-xs font-bold uppercase tracking-wider">
+              ONLY DELIVERY AVAILABLE
+            </p>
           </div>
 
-          {/* Info Section */}
-          <div className="flex flex-row justify-between mb-4 gap-2">
-            <div>
-              <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">
-                {isSale ? 'Billed To' : 'Supplier'}
-              </h3>
-              <p className="text-sm sm:text-lg font-bold text-gray-900">{partyName || 'Cash / Walk-in'}</p>
-              {partyPhone && <p className="text-xs sm:text-sm text-gray-600 mt-1">Phone: {partyPhone}</p>}
-              {partyAddress && <p className="text-xs sm:text-sm text-gray-600 whitespace-pre-wrap">{partyAddress}</p>}
-            </div>
-            <div className="text-right">
-              <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">Details</h3>
-              <p className="text-xs sm:text-sm text-gray-900 mb-1">
-                <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Invoice #:</span>
-                {invoiceNumber}
-              </p>
-              <p className="text-xs sm:text-sm text-gray-900 mb-1">
-                <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Date:</span>
-                {format(new Date(data.date), 'dd MMM, yyyy')}
-              </p>
-              <p className="text-xs sm:text-sm text-gray-900 mb-1">
-                <span className="font-semibold text-gray-600 mr-1 sm:mr-2">Status:</span>
-                <span className={`font-bold ${data.status === 'PAID' ? 'text-green-600' : data.status === 'PARTIAL' ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {data.status}
-                </span>
-              </p>
-            </div>
-          </div>
+          <div className="border-b-[1.5px] border-black my-3" />
 
-          {/* Items Table */}
-          <div className="mb-4">
-            <table className="w-full text-left border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100 border-b-2 border-gray-400">
-                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center w-8 sm:w-12">#</th>
-                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Item</th>
-                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-center">Qty</th>
-                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Price</th>
-                  <th className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-[10px] sm:text-sm font-bold text-gray-700 uppercase tracking-wider text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((item, index) => (
-                  <tr key={index} className="border-b border-gray-300">
-                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-center">{index + 1}</td>
-                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900">{item.productId?.name || 'Unknown Product'}</p>
-                    </td>
-                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-center">{item.quantity}</td>
-                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm text-gray-800 text-right">
-                      {(isSale ? item.price : item.cost)?.toLocaleString()}
-                    </td>
-                    <td className="py-1 px-1 sm:py-2 sm:px-3 border border-gray-300 text-xs sm:text-sm font-bold text-gray-900 text-right">
-                      {(((isSale ? item.price : item.cost) || 0) * item.quantity).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Totals */}
-          <div className="flex justify-end">
-            <div className="w-[65%] sm:w-72">
-              <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
-                <span className="text-xs sm:text-sm font-medium text-gray-600">Subtotal:</span>
-                <span className="text-xs sm:text-sm font-bold text-gray-900">Rs. {data.subtotal?.toLocaleString()}</span>
-              </div>
-              {data.discount > 0 && (
-                <div className="flex justify-between py-1 sm:py-2 border-b border-gray-200">
-                  <span className="text-xs sm:text-sm font-medium text-gray-600">Discount:</span>
-                  <span className="text-xs sm:text-sm font-bold text-red-600">- Rs. {data.discount?.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between py-1 sm:py-2 border-b-2 border-gray-800">
-                <span className="text-sm sm:text-lg font-bold text-gray-900">Grand Total:</span>
-                <span className="text-sm sm:text-lg font-bold text-gray-900">Rs. {data.grandTotal?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-gray-200 mt-1 sm:mt-2">
-                <span className="text-xs sm:text-sm font-medium text-gray-600">Amount Paid:</span>
-                <span className="text-xs sm:text-sm font-bold text-green-600">Rs. {data.paid?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs sm:text-sm font-bold text-gray-900">Balance:</span>
-                <span className={`text-xs sm:text-sm font-bold ${data.remaining > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                  Rs. {data.remaining?.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 pt-4 border-t-2 border-yellow-500 text-center">
-            <p className="text-md font-bold text-gray-800 mb-1 italic">Behtareen Taste, Hamesha Aapke Sath!</p>
-            <p className="text-xs text-gray-500">Thank you for your business. For queries, please contact the numbers above.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Thermal Printer Receipt Engine (Visible only during print) */}
-      <div 
-        className="hidden print:block text-black bg-white" 
-        style={{ 
-          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", 
-          width: '74mm', 
-          maxWidth: '74mm', 
-          margin: '0 auto', 
-          padding: '2mm 3mm',
-          boxSizing: 'border-box'
-        }}
-      >
-        {/* Header */}
-        <div className="text-center mb-3">
-          <h2 className="text-2xl font-black uppercase tracking-wide mb-1" style={{ letterSpacing: '0.03em' }}>
-            HAMDAN TRADERS
-          </h2>
-          <p className="text-xs font-normal mb-1">
-            0319-2828305 &nbsp;|&nbsp; 0300-2970372
-          </p>
-          <p className="text-xs font-bold uppercase tracking-wider">
-            ONLY DELIVERY AVAILABLE
-          </p>
-        </div>
-
-        <div className="border-b-[1.5px] border-black my-3" />
-
-        {/* Invoice & Party Metadata */}
-        <div className="space-y-1.5 text-xs">
-          <div className="grid grid-cols-[85px_1fr] items-baseline">
-            <span className="font-bold">Invoice #:</span>
-            <span>{invoiceNumber}</span>
-          </div>
-          <div className="grid grid-cols-[85px_1fr] items-baseline">
-            <span className="font-bold">Date:</span>
-            <span>{format(new Date(data.date), 'dd/MM/yyyy')}</span>
-          </div>
-          <div className="grid grid-cols-[85px_1fr] items-baseline">
-            <span className="font-bold">Time:</span>
-            <span>{format(new Date(data.date), 'hh:mm a')}</span>
-          </div>
-
-          <div className="border-t border-dashed border-black my-2.5" />
-
-          <div className="grid grid-cols-[85px_1fr] items-start">
-            <span className="font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
-            <span className="leading-tight break-words">{partyName || 'Cash / Walk-in'}</span>
-          </div>
-          {partyPhone && (
+          {/* Invoice & Party Metadata */}
+          <div className="space-y-1.5 text-xs">
             <div className="grid grid-cols-[85px_1fr] items-baseline">
-              <span className="font-bold">Phone:</span>
-              <span>{partyPhone}</span>
+              <span className="font-bold">Invoice #:</span>
+              <span>{invoiceNumber}</span>
             </div>
-          )}
-          {partyAddress && (
+            <div className="grid grid-cols-[85px_1fr] items-baseline">
+              <span className="font-bold">Date:</span>
+              <span>{format(new Date(data.date), 'dd/MM/yyyy')}</span>
+            </div>
+            <div className="grid grid-cols-[85px_1fr] items-baseline">
+              <span className="font-bold">Time:</span>
+              <span>{format(new Date(data.date), 'hh:mm a')}</span>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2.5" />
+
             <div className="grid grid-cols-[85px_1fr] items-start">
-              <span className="font-bold">Address:</span>
-              <span className="text-[11px] leading-tight break-words">{partyAddress}</span>
+              <span className="font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
+              <span className="leading-tight break-words">{partyName || 'Cash / Walk-in'}</span>
             </div>
-          )}
-        </div>
-
-        <div className="border-b-[1.5px] border-black my-3" />
-
-        {/* Boxed Items Table */}
-        <table className="w-full text-xs border-collapse border border-black mb-3">
-          <thead>
-            <tr className="border-b border-black">
-              <th className="py-1.5 px-2 text-left font-bold border-r border-black" style={{ width: '48%' }}>
-                Item
-              </th>
-              <th className="py-1.5 px-2 text-center font-bold border-r border-black" style={{ width: '22%' }}>
-                Qty
-              </th>
-              <th className="py-1.5 px-2 text-center font-bold" style={{ width: '30%' }}>
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((item, index) => {
-              const price = isSale ? item.price : item.cost;
-              const total = (price || 0) * item.quantity;
-              return (
-                <tr key={index} className="border-b border-black last:border-b-0">
-                  <td className="py-2 px-2 align-top text-left border-r border-black">
-                    <div className="font-bold leading-tight">{item.productId?.name || 'Unknown Product'}</div>
-                    <div className="text-[11px] text-gray-700 mt-1">@ {price?.toLocaleString()}</div>
-                  </td>
-                  <td className="py-2 px-2 align-top text-center font-normal border-r border-black">
-                    {item.quantity}
-                  </td>
-                  <td className="py-2 px-2 align-top text-center font-normal">
-                    Rs. {total.toLocaleString()}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        {/* Totals Section */}
-        <div className="flex justify-end mb-3">
-          <div className="w-[62%] space-y-1.5 text-xs">
-            <div className="flex justify-between">
-              <span className="font-bold">Subtotal:</span>
-              <span>Rs. {data.subtotal?.toLocaleString()}</span>
-            </div>
-            {data.discount > 0 && (
-              <div className="flex justify-between">
-                <span className="font-bold">Discount:</span>
-                <span>- Rs. {data.discount?.toLocaleString()}</span>
+            {partyPhone && (
+              <div className="grid grid-cols-[85px_1fr] items-baseline">
+                <span className="font-bold">Phone:</span>
+                <span>{partyPhone}</span>
               </div>
             )}
-            <div className="flex justify-between items-baseline font-bold text-sm">
-              <span className="font-black text-sm">TOTAL:</span>
-              <span className="font-black text-sm">Rs. {data.grandTotal?.toLocaleString()}</span>
+            {partyAddress && (
+              <div className="grid grid-cols-[85px_1fr] items-start">
+                <span className="font-bold">Address:</span>
+                <span className="text-[11px] leading-tight break-words">{partyAddress}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="border-b-[1.5px] border-black my-3" />
+
+          {/* Boxed Items Table */}
+          <table className="w-full text-xs border-collapse border border-black mb-3">
+            <thead>
+              <tr className="border-b border-black">
+                <th className="py-1.5 px-2 text-left font-bold border-r border-black" style={{ width: '40%' }}>
+                  Item
+                </th>
+                <th className="py-1.5 px-1 text-center font-bold border-r border-black" style={{ width: '18%' }}>
+                  Rate
+                </th>
+                <th className="py-1.5 px-1 text-center font-bold border-r border-black" style={{ width: '16%' }}>
+                  Qty
+                </th>
+                <th className="py-1.5 px-2 text-center font-bold" style={{ width: '26%' }}>
+                  Amount
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, index) => {
+                const price = isSale ? item.price : item.cost;
+                const total = (price || 0) * item.quantity;
+                return (
+                  <tr key={index} className="border-b border-black last:border-b-0">
+                    <td className="py-2 px-2 align-top text-left border-r border-black">
+                      <div className="font-bold leading-tight">{item.productId?.name || 'Unknown Product'}</div>
+                    </td>
+                    <td className="py-2 px-1 align-top text-center font-normal border-r border-black">
+                      {price?.toLocaleString()}
+                    </td>
+                    <td className="py-2 px-1 align-top text-center font-normal border-r border-black">
+                      {item.quantity}
+                    </td>
+                    <td className="py-2 px-2 align-top text-center font-normal">
+                      Rs. {total.toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {/* Totals Section */}
+          <div className="flex justify-end mb-3">
+            <div className="w-[62%] space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="font-bold">Subtotal:</span>
+                <span>Rs. {data.subtotal?.toLocaleString()}</span>
+              </div>
+              {data.discount > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Discount:</span>
+                  <span>- Rs. {data.discount?.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-baseline font-bold text-sm">
+                <span className="font-black text-sm">TOTAL:</span>
+                <span className="font-black text-sm">Rs. {data.grandTotal?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-bold">Paid:</span>
+                <span>Rs. {data.paid?.toLocaleString()}</span>
+              </div>
+              <div className="border-t border-dashed border-black my-1" />
+              <div className="flex justify-between font-bold">
+                <span>Balance:</span>
+                <span>Rs. {data.remaining?.toLocaleString()}</span>
+              </div>
             </div>
+          </div>
+
+          <div className="border-b-[1.5px] border-black my-3" />
+
+          {/* Invoice Opened & Status Section */}
+          <div className="space-y-1.5 text-xs">
             <div className="flex justify-between">
-              <span className="font-bold">Paid:</span>
-              <span>Rs. {data.paid?.toLocaleString()}</span>
+              <span className="font-bold">Invoice Opened:</span>
+              <span>{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
             </div>
-            <div className="border-t border-dashed border-black my-1" />
-            <div className="flex justify-between font-bold">
-              <span>Balance:</span>
-              <span>Rs. {data.remaining?.toLocaleString()}</span>
+            <div className="flex justify-between items-baseline">
+              <span className="font-bold">Status:</span>
+              <span className="font-bold text-sm">
+                {data.status === 'PAID' ? 'Paid' : data.status === 'PARTIAL' ? 'Partial' : 'Unpaid'}
+              </span>
             </div>
           </div>
-        </div>
 
-        <div className="border-b-[1.5px] border-black my-3" />
+          <div className="border-t border-dashed border-black my-3" />
 
-        {/* Invoice Opened & Status Section */}
-        <div className="space-y-1.5 text-xs">
-          <div className="flex justify-between">
-            <span className="font-bold">Invoice Opened:</span>
-            <span>{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
+          {/* Footer */}
+          <div className="text-center mt-3 text-xs space-y-1">
+            <p className="font-bold italic text-xs">Behtareen Taste, Hamesha Aapke Sath!</p>
+            <p className="text-[11px] text-gray-800">Thank you for your business.</p>
+            <p className="text-[10px] font-bold text-gray-800 mt-2.5">-- Powered By: www.corevex.tech --</p>
           </div>
-          <div className="flex justify-between items-baseline">
-            <span className="font-bold">Status:</span>
-            <span className="font-bold text-sm">
-              {data.status === 'PAID' ? 'Paid' : data.status === 'PARTIAL' ? 'Partial' : 'Unpaid'}
-            </span>
-          </div>
-        </div>
-
-        <div className="border-t border-dashed border-black my-3" />
-
-        {/* Footer */}
-        <div className="text-center mt-3 text-xs space-y-1">
-          <p className="font-bold italic text-xs">Behtareen Taste, Hamesha Aapke Sath!</p>
-          <p className="text-[11px] text-gray-800">Thank you for your business.</p>
-          <p className="text-[10px] font-bold text-gray-800 mt-2.5">-- Powered By: www.corevex.tech --</p>
         </div>
       </div>
     </div>
