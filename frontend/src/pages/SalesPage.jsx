@@ -434,14 +434,25 @@ const SalesPage = () => {
                     {format(new Date(sale.date), 'dd MMM yyyy, hh:mm a')}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm ${sale.isCancelled ? 'text-red-600 line-through' : 'text-gray-900'}`}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCustomerId(sale.customerId?._id || '')}
-                      className="hover:text-blue-600 hover:underline cursor-pointer text-left font-medium"
-                      title="Filter by this customer"
-                    >
-                      {sale.customerId?.name || 'Walk-in / Unknown'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomerId(sale.customerId?._id || '')}
+                        className="hover:text-blue-600 hover:underline cursor-pointer text-left font-medium"
+                        title="Filter by this customer"
+                      >
+                        {sale.customerId?.name || 'Walk-in / Unknown'}
+                      </button>
+                      {sale.category === 'Pizza Branches' ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                          🍕 Branch
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          🏙️ City
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${sale.isCancelled ? 'text-red-600 line-through' : ''}`}>
                     Rs. {Number(sale.grandTotal).toLocaleString()}
@@ -539,8 +550,19 @@ const SalesPage = () => {
                     <div className="text-xs text-gray-500 mt-0.5">
                       {format(new Date(s.date), 'dd MMM yyyy, hh:mm a')}
                     </div>
-                    <div className="text-xs font-medium text-blue-600 mt-1">
-                      {s.customerId?.name || 'Walk-in / Unknown'}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-xs font-medium text-blue-600">
+                        {s.customerId?.name || 'Walk-in / Unknown'}
+                      </span>
+                      {s.category === 'Pizza Branches' ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                          🍕 Branch
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700">
+                          🏙️ City
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

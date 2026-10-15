@@ -22,6 +22,8 @@ const ProductsPage = () => {
     unit: 'Box',
     purchasePrice: '',
     salePrice: '',
+    citySalePrice: '',
+    branchSalePrice: '',
     minimumStock: '',
     openingStock: '',
     expiryDate: '',
@@ -72,6 +74,8 @@ const ProductsPage = () => {
         unit: product.unit || 'Box',
         purchasePrice: product.purchasePrice !== undefined && product.purchasePrice !== null ? String(product.purchasePrice) : '',
         salePrice: product.salePrice !== undefined && product.salePrice !== null ? String(product.salePrice) : '',
+        citySalePrice: product.citySalePrice !== undefined && product.citySalePrice !== null ? String(product.citySalePrice) : (product.salePrice ? String(product.salePrice) : ''),
+        branchSalePrice: product.branchSalePrice !== undefined && product.branchSalePrice !== null ? String(product.branchSalePrice) : '',
         minimumStock: product.minimumStock !== undefined && product.minimumStock !== null ? String(product.minimumStock) : '',
         openingStock: '',
         expiryDate: product.expiryDate ? product.expiryDate.split('T')[0] : '',
@@ -84,6 +88,8 @@ const ProductsPage = () => {
         unit: 'Box',
         purchasePrice: '',
         salePrice: '',
+        citySalePrice: '',
+        branchSalePrice: '',
         minimumStock: '',
         openingStock: '',
         expiryDate: '',
@@ -97,10 +103,17 @@ const ProductsPage = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const numCity = formData.citySalePrice === '' || formData.citySalePrice === null || isNaN(Number(formData.citySalePrice)) ? 0 : Math.max(0, Number(formData.citySalePrice));
+      const numBranch = formData.branchSalePrice === '' || formData.branchSalePrice === null || isNaN(Number(formData.branchSalePrice)) ? 0 : Math.max(0, Number(formData.branchSalePrice));
+      const fallbackSale = formData.salePrice === '' || formData.salePrice === null || isNaN(Number(formData.salePrice)) ? 0 : Math.max(0, Number(formData.salePrice));
+      const numSale = numCity || numBranch || fallbackSale;
+
       const payload = {
         ...formData,
         purchasePrice: formData.purchasePrice === '' || formData.purchasePrice === null || isNaN(Number(formData.purchasePrice)) ? 0 : Math.max(0, Number(formData.purchasePrice)),
-        salePrice: formData.salePrice === '' || formData.salePrice === null || isNaN(Number(formData.salePrice)) ? 0 : Math.max(0, Number(formData.salePrice)),
+        citySalePrice: numCity,
+        branchSalePrice: numBranch,
+        salePrice: numSale,
         minimumStock: formData.minimumStock === '' || formData.minimumStock === null || isNaN(Number(formData.minimumStock)) ? 0 : Math.max(0, Number(formData.minimumStock))
       };
 
@@ -180,7 +193,7 @@ const ProductsPage = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
 
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Purchase Price</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Rates</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Min Stock</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
@@ -216,8 +229,28 @@ const ProductsPage = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                   Rs. {Number(product.purchasePrice || 0).toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                  Rs. {Number(product.salePrice || 0).toLocaleString()}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                  <div className="flex flex-col items-end gap-1">
+                    {product.citySalePrice ? (
+                      <span className="text-blue-700 font-semibold text-xs bg-blue-50 px-2 py-0.5 rounded">
+                        City: Rs. {Number(product.citySalePrice).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">City: -</span>
+                    )}
+                    {product.branchSalePrice ? (
+                      <span className="text-amber-800 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded">
+                        Branch: Rs. {Number(product.branchSalePrice).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Branch: -</span>
+                    )}
+                    {!product.citySalePrice && !product.branchSalePrice && product.salePrice ? (
+                      <span className="text-gray-700 font-medium text-xs">
+                        Rs. {Number(product.salePrice).toLocaleString()}
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                   <span className={`font-bold ${product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}`}>
@@ -293,10 +326,18 @@ const ProductsPage = () => {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-bold text-sm text-gray-900 whitespace-nowrap">
-                      Rs. {Number(p.salePrice).toLocaleString()}
-                    </p>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    <div className="flex flex-col items-end text-xs">
+                      {p.citySalePrice ? (
+                        <span className="text-blue-700 font-bold whitespace-nowrap">City: Rs. {Number(p.citySalePrice).toLocaleString()}</span>
+                      ) : null}
+                      {p.branchSalePrice ? (
+                        <span className="text-amber-700 font-bold whitespace-nowrap">Branch: Rs. {Number(p.branchSalePrice).toLocaleString()}</span>
+                      ) : null}
+                      {!p.citySalePrice && !p.branchSalePrice && (
+                        <span className="font-bold text-gray-900 whitespace-nowrap">Rs. {Number(p.salePrice || 0).toLocaleString()}</span>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-1 inline-block ${
                       isLowStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                     }`}>
                       {p.currentStock} {p.unit}
@@ -342,9 +383,16 @@ const ProductsPage = () => {
                       <span className="text-gray-500">Purchase Price: </span>
                       <span className="font-semibold text-gray-800">Rs. {Number(p.purchasePrice || 0).toLocaleString()}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-gray-500">Sale Price: </span>
-                      <span className="font-semibold text-blue-600">Rs. {Number(p.salePrice || 0).toLocaleString()}</span>
+                    <div className="text-right flex flex-col items-end">
+                      {p.citySalePrice ? (
+                        <div className="text-blue-700 font-semibold">City: Rs. {Number(p.citySalePrice).toLocaleString()}</div>
+                      ) : null}
+                      {p.branchSalePrice ? (
+                        <div className="text-amber-700 font-semibold">Branch: Rs. {Number(p.branchSalePrice).toLocaleString()}</div>
+                      ) : null}
+                      {!p.citySalePrice && !p.branchSalePrice && (
+                        <div><span className="text-gray-500">Sale: </span><span className="font-semibold text-blue-600">Rs. {Number(p.salePrice || 0).toLocaleString()}</span></div>
+                      )}
                     </div>
                   </div>
 
@@ -428,8 +476,32 @@ const ProductsPage = () => {
                   <input type="number" min="0" step="0.01" placeholder="0" value={formData.purchasePrice} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
-                  <input type="number" min="0" step="0.01" placeholder="0" value={formData.salePrice} onChange={e => setFormData({...formData, salePrice: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City Sale Rate (Rs) <span className="text-xs text-blue-600 font-normal">(City Rate)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 520 (Blank if not for City)"
+                    value={formData.citySalePrice}
+                    onChange={e => setFormData({...formData, citySalePrice: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pizza Branches Sale Rate (Rs) <span className="text-xs text-amber-600 font-normal">(Branch Rate)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 480 (Blank if not for Branches)"
+                    value={formData.branchSalePrice}
+                    onChange={e => setFormData({...formData, branchSalePrice: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-amber-500 focus:border-amber-500"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>

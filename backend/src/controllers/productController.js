@@ -44,11 +44,14 @@ const getProductById = async (req, res) => {
 // @access  Private
 const createProduct = async (req, res) => {
   try {
-    const { name, unit, purchasePrice, salePrice, minimumStock, expiryDate, openingStock = 0 } = req.body;
+    const { name, unit, purchasePrice, salePrice, citySalePrice, branchSalePrice, minimumStock, expiryDate, openingStock = 0 } = req.body;
     const initialStock = Math.max(0, Number(openingStock) || 0);
 
     const numericPurchasePrice = purchasePrice === '' || purchasePrice === null || isNaN(Number(purchasePrice)) ? 0 : Math.max(0, Number(purchasePrice));
-    const numericSalePrice = salePrice === '' || salePrice === null || isNaN(Number(salePrice)) ? 0 : Math.max(0, Number(salePrice));
+    const numericCitySalePrice = citySalePrice === '' || citySalePrice === null || isNaN(Number(citySalePrice)) ? 0 : Math.max(0, Number(citySalePrice));
+    const numericBranchSalePrice = branchSalePrice === '' || branchSalePrice === null || isNaN(Number(branchSalePrice)) ? 0 : Math.max(0, Number(branchSalePrice));
+    const fallbackSalePrice = salePrice === '' || salePrice === null || isNaN(Number(salePrice)) ? 0 : Math.max(0, Number(salePrice));
+    const numericSalePrice = numericCitySalePrice || numericBranchSalePrice || fallbackSalePrice;
     const numericMinStock = minimumStock === '' || minimumStock === null || isNaN(Number(minimumStock)) ? 0 : Math.max(0, Number(minimumStock));
 
     const product = await Product.create({
@@ -56,6 +59,8 @@ const createProduct = async (req, res) => {
       unit,
       purchasePrice: numericPurchasePrice,
       salePrice: numericSalePrice,
+      citySalePrice: numericCitySalePrice,
+      branchSalePrice: numericBranchSalePrice,
       minimumStock: numericMinStock,
       expiryDate,
       currentStock: initialStock
@@ -90,11 +95,11 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const fieldsToUpdate = ['name', 'unit', 'purchasePrice', 'salePrice', 'minimumStock', 'expiryDate', 'isActive'];
+    const fieldsToUpdate = ['name', 'unit', 'purchasePrice', 'salePrice', 'citySalePrice', 'branchSalePrice', 'minimumStock', 'expiryDate', 'isActive'];
     
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {
-        if (field === 'purchasePrice' || field === 'salePrice' || field === 'minimumStock') {
+        if (field === 'purchasePrice' || field === 'salePrice' || field === 'citySalePrice' || field === 'branchSalePrice' || field === 'minimumStock') {
           const val = req.body[field];
           product[field] = val === '' || val === null || isNaN(Number(val)) ? 0 : Math.max(0, Number(val));
         } else {
@@ -102,6 +107,11 @@ const updateProduct = async (req, res) => {
         }
       }
     });
+
+    // Ensure general salePrice reflects citySalePrice or branchSalePrice if updated
+    if (product.citySalePrice > 0 || product.branchSalePrice > 0) {
+      product.salePrice = product.citySalePrice || product.branchSalePrice || product.salePrice;
+    }
 
     const updatedProduct = await product.save();
     res.json({ success: true, data: updatedProduct });

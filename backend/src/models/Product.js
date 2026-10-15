@@ -7,6 +7,8 @@ const productSchema = new mongoose.Schema(
     unit: { type: String },
     purchasePrice: { type: Number, min: 0 },
     salePrice: { type: Number, min: 0 },
+    citySalePrice: { type: Number, min: 0 },
+    branchSalePrice: { type: Number, min: 0 },
     currentStock: { type: Number, default: 0 },
     minimumStock: { type: Number, default: 0 },
     expiryDate: { type: Date },

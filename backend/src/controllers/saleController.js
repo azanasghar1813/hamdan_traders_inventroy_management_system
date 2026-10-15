@@ -47,9 +47,13 @@ const checkAndNotifyLowStock = async (productIds) => {
 // @access  Private
 const getSales = async (req, res) => {
   try {
-    const { page, limit, customerId, search, startDate, endDate, sortField = 'date', sortOrder = 'desc', all } = req.query;
+    const { page, limit, customerId, search, startDate, endDate, sortField = 'date', sortOrder = 'desc', all, category } = req.query;
 
     const filter = {};
+
+    if (category) {
+      filter.category = category;
+    }
 
     if (customerId) {
       filter.customerId = customerId;
@@ -276,6 +280,7 @@ const createSale = async (req, res) => {
       const sale = new Sale({
         invoiceNumber,
         customerId: resolvedCustomerId,
+        category: req.body.category === 'Pizza Branches' ? 'Pizza Branches' : 'City',
         items: validatedItems,
         subtotal: calculatedSubtotal,
         discount: validatedDiscount,
@@ -457,6 +462,7 @@ const updateSale = async (req, res) => {
       oldSale.paid = validatedPaid;
       oldSale.remaining = calculatedRemaining;
       if (date) oldSale.date = date;
+      if (req.body.category) oldSale.category = req.body.category === 'Pizza Branches' ? 'Pizza Branches' : 'City';
       oldSale.status = status;
 
       await oldSale.save(opts);

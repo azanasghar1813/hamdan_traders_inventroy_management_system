@@ -13,12 +13,61 @@ const NewSalePage = () => {
   const [products, setProducts] = useState([]);
   
   const [customer, setCustomer] = useState({ id: '', name: '', isManual: false });
+  const [category, setCategory] = useState('City'); // 'City' or 'Pizza Branches'
   const [items, setItems] = useState([{ productId: '', quantity: '', price: '', total: 0 }]);
   const [discount, setDiscount] = useState('');
   const [paid, setPaid] = useState('');
   const [nextNumberInfo, setNextNumberInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(isEditing);
+
+  // Helper to extract category-specific price for a product
+  const getProductPrice = (product, cat) => {
+    if (!product) return '';
+    if (cat === 'City') {
+      if (product.citySalePrice !== undefined && product.citySalePrice !== null && product.citySalePrice > 0) {
+        return product.citySalePrice;
+      }
+      return product.salePrice || '';
+    } else {
+      if (product.branchSalePrice !== undefined && product.branchSalePrice !== null && product.branchSalePrice > 0) {
+        return product.branchSalePrice;
+      }
+      return product.salePrice || '';
+    }
+  };
+
+  // Filter products strictly based on selected category rate availability
+  const availableProducts = products.filter(p => {
+    if (category === 'City') {
+      const hasCity = p.citySalePrice !== undefined && p.citySalePrice !== null && p.citySalePrice > 0;
+      const isLegacyOnly = (!p.citySalePrice && !p.branchSalePrice) && p.salePrice > 0;
+      return hasCity || isLegacyOnly;
+    } else {
+      const hasBranch = p.branchSalePrice !== undefined && p.branchSalePrice !== null && p.branchSalePrice > 0;
+      const isLegacyOnly = (!p.citySalePrice && !p.branchSalePrice) && p.salePrice > 0;
+      return hasBranch || isLegacyOnly;
+    }
+  });
+
+  const handleCategoryChange = (newCategory) => {
+    if (newCategory === category) return;
+    setCategory(newCategory);
+    // Automatically re-calculate and update rates for existing items in the bill
+    setItems(prevItems => prevItems.map(item => {
+      if (!item.productId) return item;
+      const prod = products.find(p => p._id === item.productId);
+      if (!prod) return item;
+      const newPrice = getProductPrice(prod, newCategory);
+      const resolvedPrice = newPrice !== '' ? newPrice : item.price;
+      const qty = Number(item.quantity) || 0;
+      return {
+        ...item,
+        price: resolvedPrice,
+        total: qty * (Number(resolvedPrice) || 0)
+      };
+    }));
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -44,6 +93,9 @@ const NewSalePage = () => {
           } else if (isEditing && extraRes.data?.data) {
             const saleData = extraRes.data.data;
             const isWalkIn = !saleData.customerId || saleData.customerId.name === 'Walk-in';
+            if (saleData.category) {
+              setCategory(saleData.category);
+            }
             setCustomer({
               id: isWalkIn ? '' : (saleData.customerId?._id || ''),
               name: isWalkIn ? '' : (saleData.customerId?.name || ''),
@@ -77,7 +129,7 @@ const NewSalePage = () => {
     if (field === 'productId') {
       const product = products.find(p => p._id === value);
       newItems[index].productId = value;
-      newItems[index].price = product ? product.salePrice : '';
+      newItems[index].price = product ? getProductPrice(product, category) : '';
       newItems[index].total = (Number(newItems[index].quantity) || 0) * (Number(newItems[index].price) || 0);
     } else {
       newItems[index][field] = value;
@@ -129,6 +181,7 @@ const NewSalePage = () => {
 
       const payload = {
         customerId: finalCustomerId,
+        category,
         items: items.map(i => ({
           productId: i.productId,
           quantity: Number(i.quantity) || 1,
@@ -198,6 +251,60 @@ const NewSalePage = () => {
       </div>
       
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+        {/* Rate Category Selector Tabs */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              Select Rate Category (City / Pizza Branches)
+            </label>
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              category === 'City'
+                ? 'text-blue-800 bg-blue-100 border-blue-300'
+                : 'text-amber-800 bg-amber-100 border-amber-300'
+            }`}>
+              Active: {category}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('City')}
+              className={`py-3 px-4 rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2.5 border-2 ${
+                category === 'City'
+                  ? 'bg-blue-600 border-blue-600 text-white font-black shadow-md ring-2 ring-blue-300'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'
+              }`}
+            >
+              <span className="text-xl">🏙️</span>
+              <span className={category === 'City' ? 'font-black text-base tracking-wide' : 'font-semibold text-sm'}>
+                City Rate
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCategoryChange('Pizza Branches')}
+              className={`py-3 px-4 rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2.5 border-2 ${
+                category === 'Pizza Branches'
+                  ? 'bg-amber-600 border-amber-600 text-white font-black shadow-md ring-2 ring-amber-300'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'
+              }`}
+            >
+              <span className="text-xl">🍕</span>
+              <span className={category === 'Pizza Branches' ? 'font-black text-base tracking-wide' : 'font-semibold text-sm'}>
+                Pizza Branches Rate
+              </span>
+            </button>
+          </div>
+          <div className="mt-2.5 flex items-center justify-between text-xs text-gray-500">
+            <span>
+              Showing: <strong className="text-gray-900">{category === 'City' ? 'City Products & Rates' : 'Pizza Branches Products & Rates'}</strong>
+            </span>
+            <span className="font-semibold text-gray-700">
+              {availableProducts.length} items available
+            </span>
+          </div>
+        </div>
+
         <div className="mb-6">
           <SelectOrTypeInput
             label="Select Customer (Optional)"
@@ -220,12 +327,15 @@ const NewSalePage = () => {
                     onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
                   >
-                    <option value="">Select Product</option>
-                    {products.map(p => (
-                      <option key={p._id} value={p._id}>
-                        {p.name} ({p.currentStock} in stock)
-                      </option>
-                    ))}
+                    <option value="">Select Product ({availableProducts.length} available)</option>
+                    {availableProducts.map(p => {
+                      const catPrice = getProductPrice(p, category);
+                      return (
+                        <option key={p._id} value={p._id}>
+                          {p.name} {catPrice ? `— Rs. ${Number(catPrice).toLocaleString()}` : ''} ({p.currentStock} in stock)
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className="w-full md:w-24">

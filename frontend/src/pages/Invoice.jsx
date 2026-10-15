@@ -247,6 +247,12 @@ const Invoice = () => {
               <span className="w-[85px] shrink-0 font-bold">Time:</span>
               <span className="flex-1">{format(new Date(data.date), 'hh:mm a')}</span>
             </div>
+            {isSale && data.category && (
+              <div className="flex items-baseline">
+                <span className="w-[85px] shrink-0 font-bold">Category:</span>
+                <span className="flex-1">{data.category}</span>
+              </div>
+            )}
 
             {partyName && (
               <>
