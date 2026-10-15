@@ -251,13 +251,12 @@ const createPurchase = async (req, res) => {
 
       await purchase.save(opts);
 
-      // 4. Batch update stock & purchasePrice using atomic bulkWrite (1 round-trip)
+      // 4. Batch update stock using atomic bulkWrite (1 round-trip)
       const stockBulkOps = validatedItems.map(item => ({
         updateOne: {
           filter: { _id: item.productId },
           update: {
-            $inc: { currentStock: Number(item.quantity) },
-            $set: { purchasePrice: Number(item.cost) }
+            $inc: { currentStock: Number(item.quantity) }
           }
         }
       }));
@@ -382,13 +381,12 @@ const updatePurchase = async (req, res) => {
         throw new Error(`Product not found: ${missing}`);
       }
 
-      // 5. Apply new stock increments and cost updates
+      // 5. Apply new stock increments
       const stockBulkOps = validatedItems.map(item => ({
         updateOne: {
           filter: { _id: item.productId },
           update: {
-            $inc: { currentStock: Number(item.quantity) },
-            $set: { purchasePrice: Number(item.cost) }
+            $inc: { currentStock: Number(item.quantity) }
           }
         }
       }));

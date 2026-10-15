@@ -166,7 +166,7 @@ const ReportsPage = () => {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8.5);
       doc.setTextColor(217, 119, 6);
-      doc.text('Behtareen Taste, Hamesha Aapke Sath! | Phone: 0319-2828305 / 0300-2970372', 14, 28);
+      doc.text('Behtareen Taste, Hamesha Aapke Sath! | Phone: 0300-2970372', 14, 28);
 
       // Gold Accent Divider Line
       doc.setDrawColor(234, 179, 8);

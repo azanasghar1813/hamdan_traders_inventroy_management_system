@@ -47,10 +47,10 @@ const Invoice = () => {
   if (!data) return <div className="text-center py-10 text-red-500 font-semibold">Invoice not found.</div>;
 
   const rawPartyName = isSale ? data.customerId?.name : data.supplierId?.name;
-  const isGenericParty = !rawPartyName || 
-    rawPartyName.trim().toLowerCase() === 'walk-in' || 
-    rawPartyName.trim().toLowerCase() === 'cash / walk-in' || 
-    rawPartyName.trim().toLowerCase() === 'general supplier' || 
+  const isGenericParty = !rawPartyName ||
+    rawPartyName.trim().toLowerCase() === 'walk-in' ||
+    rawPartyName.trim().toLowerCase() === 'cash / walk-in' ||
+    rawPartyName.trim().toLowerCase() === 'general supplier' ||
     rawPartyName.trim().toLowerCase() === 'unnamed customer' ||
     rawPartyName.trim().toLowerCase() === 'unnamed supplier';
 
@@ -200,10 +200,10 @@ const Invoice = () => {
               HAMDAN TRADERS
             </h2>
             <p className="text-xs font-normal mb-1">
-              0319-2828305 &nbsp;|&nbsp; 0300-2970372
+              Contact at : 0300-2970372
             </p>
             <p className="text-xs font-bold uppercase tracking-wider">
-              ONLY DELIVERY AVAILABLE
+              DELIVERY AVAILABLE
             </p>
           </div>
 

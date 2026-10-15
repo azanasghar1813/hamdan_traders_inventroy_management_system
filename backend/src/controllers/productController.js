@@ -47,12 +47,16 @@ const createProduct = async (req, res) => {
     const { name, unit, purchasePrice, salePrice, minimumStock, expiryDate, openingStock = 0 } = req.body;
     const initialStock = Math.max(0, Number(openingStock) || 0);
 
+    const numericPurchasePrice = purchasePrice === '' || purchasePrice === null || isNaN(Number(purchasePrice)) ? 0 : Math.max(0, Number(purchasePrice));
+    const numericSalePrice = salePrice === '' || salePrice === null || isNaN(Number(salePrice)) ? 0 : Math.max(0, Number(salePrice));
+    const numericMinStock = minimumStock === '' || minimumStock === null || isNaN(Number(minimumStock)) ? 0 : Math.max(0, Number(minimumStock));
+
     const product = await Product.create({
       name,
       unit,
-      purchasePrice,
-      salePrice,
-      minimumStock,
+      purchasePrice: numericPurchasePrice,
+      salePrice: numericSalePrice,
+      minimumStock: numericMinStock,
       expiryDate,
       currentStock: initialStock
     });
@@ -90,7 +94,12 @@ const updateProduct = async (req, res) => {
     
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {
-        product[field] = req.body[field];
+        if (field === 'purchasePrice' || field === 'salePrice' || field === 'minimumStock') {
+          const val = req.body[field];
+          product[field] = val === '' || val === null || isNaN(Number(val)) ? 0 : Math.max(0, Number(val));
+        } else {
+          product[field] = req.body[field];
+        }
       }
     });
 

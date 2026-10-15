@@ -70,9 +70,9 @@ const ProductsPage = () => {
       setFormData({
         name: product.name,
         unit: product.unit || 'Box',
-        purchasePrice: product.purchasePrice,
-        salePrice: product.salePrice,
-        minimumStock: product.minimumStock,
+        purchasePrice: product.purchasePrice !== undefined && product.purchasePrice !== null ? String(product.purchasePrice) : '',
+        salePrice: product.salePrice !== undefined && product.salePrice !== null ? String(product.salePrice) : '',
+        minimumStock: product.minimumStock !== undefined && product.minimumStock !== null ? String(product.minimumStock) : '',
         openingStock: '',
         expiryDate: product.expiryDate ? product.expiryDate.split('T')[0] : '',
         isActive: product.isActive
@@ -97,10 +97,17 @@ const ProductsPage = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        ...formData,
+        purchasePrice: formData.purchasePrice === '' || formData.purchasePrice === null || isNaN(Number(formData.purchasePrice)) ? 0 : Math.max(0, Number(formData.purchasePrice)),
+        salePrice: formData.salePrice === '' || formData.salePrice === null || isNaN(Number(formData.salePrice)) ? 0 : Math.max(0, Number(formData.salePrice)),
+        minimumStock: formData.minimumStock === '' || formData.minimumStock === null || isNaN(Number(formData.minimumStock)) ? 0 : Math.max(0, Number(formData.minimumStock))
+      };
+
       if (editingProduct) {
-        await api.put(`/products/${editingProduct._id}`, formData);
+        await api.put(`/products/${editingProduct._id}`, payload);
       } else {
-        await api.post('/products', formData);
+        await api.post('/products', payload);
       }
       setIsModalOpen(false);
       fetchProducts(search);
@@ -207,10 +214,10 @@ const ProductsPage = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                  Rs. {Number(product.purchasePrice).toLocaleString()}
+                  Rs. {Number(product.purchasePrice || 0).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                  Rs. {Number(product.salePrice).toLocaleString()}
+                  Rs. {Number(product.salePrice || 0).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                   <span className={`font-bold ${product.currentStock <= product.minimumStock ? 'text-red-600' : 'text-gray-900'}`}>
@@ -333,11 +340,11 @@ const ProductsPage = () => {
                   <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2 border-gray-100">
                     <div>
                       <span className="text-gray-500">Purchase Price: </span>
-                      <span className="font-semibold text-gray-800">Rs. {Number(p.purchasePrice).toLocaleString()}</span>
+                      <span className="font-semibold text-gray-800">Rs. {Number(p.purchasePrice || 0).toLocaleString()}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-gray-500">Sale Price: </span>
-                      <span className="font-semibold text-blue-600">Rs. {Number(p.salePrice).toLocaleString()}</span>
+                      <span className="font-semibold text-blue-600">Rs. {Number(p.salePrice || 0).toLocaleString()}</span>
                     </div>
                   </div>
 

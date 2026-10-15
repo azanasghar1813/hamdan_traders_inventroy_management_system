@@ -24,7 +24,7 @@ const sendDailyLowStockSummary = async () => {
       const p = lowStockProducts[0];
       const unitLabel = p.unit ? ` ${p.unit}` : '';
       payload = {
-        title: '📋 Rozana Low Stock Report (11:00 AM)',
+        title: '📋 Rozana Low Stock Report (5:00 PM)',
         body: `Sirf 1 item ka stock kam hai: ${p.name} (Baqi: ${p.currentStock}${unitLabel}). Supplier order ke liye tap karein.`,
         url: '/alerts'
       };
@@ -36,7 +36,7 @@ const sendDailyLowStockSummary = async () => {
       const extra = lowStockProducts.length > 3 ? ` aur mazeed ${lowStockProducts.length - 3} items` : '';
       payload = {
         title: `📋 Rozana Low Stock Report (${lowStockProducts.length} Items)`,
-        body: `Total ${lowStockProducts.length} items ka stock kam hai: ${preview}${extra}. Supplier order ke liye tap karein.`,
+        body: `Total ${lowStockProducts.length} items ka stock kam hai: ${preview}${extra}. Sham ko supplier order ke liye tap karein.`,
         url: '/alerts'
       };
     }
@@ -54,11 +54,11 @@ const sendDailyLowStockSummary = async () => {
  * Initialize background cron schedules
  */
 const initScheduler = () => {
-  // Run everyday at 11:00 AM Pakistan Standard Time (PKT) for testing
+  // Run everyday at 17:00 (5:00 PM) Pakistan Standard Time (PKT)
   cron.schedule(
-    '0 11 * * *',
+    '0 17 * * *',
     async () => {
-      console.log('[Cron] Triggering 11:00 AM PKT daily low stock summary...');
+      console.log('[Cron] Triggering 5:00 PM PKT daily low stock summary...');
       await sendDailyLowStockSummary();
     },
     {
@@ -66,7 +66,7 @@ const initScheduler = () => {
       timezone: 'Asia/Karachi'
     }
   );
-  console.log('✓ Scheduled daily low stock alerts at 11:00 AM (Asia/Karachi)');
+  console.log('✓ Scheduled daily low stock alerts at 5:00 PM (Asia/Karachi)');
 };
 
 module.exports = {
