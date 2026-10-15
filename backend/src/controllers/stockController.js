@@ -28,38 +28,51 @@ const adjustStock = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { productId, type, quantity, reason } = req.body;
+    const { productId, type = 'ADJUSTMENT', quantity, action, reason } = req.body;
 
-    if (!['DAMAGE', 'RETURN', 'ADJUSTMENT'].includes(type)) {
-      throw new Error('Invalid adjustment type. Allowed types: DAMAGE, RETURN, ADJUSTMENT');
-    }
-
-    if (!quantity || quantity === 0) {
+    const parsedQty = Math.abs(Number(quantity));
+    if (!parsedQty || isNaN(parsedQty) || parsedQty === 0) {
       throw new Error('Quantity must be provided and cannot be 0');
     }
+
+    // Determine signed quantity based on action ('ADD' or 'REMOVE') or given sign
+    let finalQuantity = parsedQty;
+    if (action === 'REMOVE' || (action !== 'ADD' && Number(quantity) < 0)) {
+      finalQuantity = -parsedQty;
+    }
+
+    const validTypes = ['DAMAGE', 'RETURN', 'ADJUSTMENT'];
+    const movementType = validTypes.includes(type) ? type : 'ADJUSTMENT';
 
     const product = await Product.findById(productId).session(session);
     if (!product) {
       throw new Error('Product not found');
     }
 
-    // Allow stock adjustment without blocking negative values
-
     // Create movement record
+    const defaultReason = finalQuantity > 0 ? 'Stock Added Manually' : 'Stock Removed Manually';
     await StockMovement.create([{
       productId,
-      type,
-      quantity: Number(quantity),
-      reason,
+      type: movementType,
+      quantity: finalQuantity,
+      reason: reason && reason.trim() ? reason.trim() : defaultReason,
       date: new Date()
     }], { session });
 
     // Update product stock
-    product.currentStock += Number(quantity);
+    product.currentStock += finalQuantity;
     await product.save({ session });
 
     await session.commitTransaction();
-    res.status(201).json({ success: true, message: 'Stock adjusted successfully' });
+    res.status(201).json({
+      success: true,
+      message: 'Stock adjusted successfully',
+      data: {
+        productId,
+        currentStock: product.currentStock,
+        change: finalQuantity
+      }
+    });
   } catch (error) {
     await session.abortTransaction();
     res.status(400).json({ success: false, message: error.message });

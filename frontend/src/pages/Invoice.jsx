@@ -322,12 +322,8 @@ const Invoice = () => {
 
           <div className="border-b-[1.5px] border-black my-3" />
 
-          {/* Invoice Opened & Status Section */}
+          {/* Status Section */}
           <div className="space-y-1.5 text-xs">
-            <div className="flex justify-between">
-              <span className="font-bold">Invoice Opened:</span>
-              <span>{format(new Date(data.date), 'dd/MM/yyyy hh:mm a')}</span>
-            </div>
             <div className="flex justify-between items-baseline">
               <span className="font-bold">Status:</span>
               <span className="font-bold text-sm">

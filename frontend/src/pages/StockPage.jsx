@@ -15,10 +15,11 @@ const StockPage = () => {
   const [search, setSearch] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [adjustmentAction, setAdjustmentAction] = useState('ADD'); // 'ADD' or 'REMOVE'
+  const [adjusting, setAdjusting] = useState(false);
   
   const [formData, setFormData] = useState({
-    type: 'ADJUSTMENT',
     quantity: '',
     reason: ''
   });
@@ -65,24 +66,37 @@ const StockPage = () => {
   }, []);
 
   const openAdjustmentModal = (product) => {
-    setSelectedProductId(product._id);
-    setFormData({ type: 'ADJUSTMENT', quantity: '', reason: '' });
+    setSelectedProduct(product);
+    setAdjustmentAction('ADD');
+    setFormData({ quantity: '', reason: '' });
     setIsModalOpen(true);
   };
 
   const handleAdjustment = async (e) => {
     e.preventDefault();
+    if (!selectedProduct) return;
+
+    const qty = Math.abs(Number(formData.quantity));
+    if (!qty || isNaN(qty) || qty <= 0) {
+      alert('Please enter a valid quantity greater than 0');
+      return;
+    }
+
+    setAdjusting(true);
     try {
       await api.post('/stock/adjust', {
-        productId: selectedProductId,
-        type: formData.type,
-        quantity: Number(formData.quantity),
-        reason: formData.reason
+        productId: selectedProduct._id,
+        action: adjustmentAction, // 'ADD' or 'REMOVE'
+        type: adjustmentAction === 'REMOVE' ? 'DAMAGE' : 'ADJUSTMENT',
+        quantity: qty,
+        reason: formData.reason ? formData.reason.trim() : (adjustmentAction === 'ADD' ? 'Stock Added Manually' : 'Stock Removed Manually')
       });
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
       alert(err.response?.data?.message || 'Error adjusting stock');
+    } finally {
+      setAdjusting(false);
     }
   };
 
@@ -381,58 +395,174 @@ const StockPage = () => {
       )}
 
       {/* Adjustment Modal */}
-      {isModalOpen && (
+      {isModalOpen && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Adjust Stock</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-500">&times;</button>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto overflow-hidden animate-fadeIn">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Adjust Stock</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Add or remove inventory units easily</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)} 
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none p-1 rounded hover:bg-gray-200 transition cursor-pointer"
+                title="Close"
+              >
+                &times;
+              </button>
             </div>
             
-            <form onSubmit={handleAdjustment} className="px-6 py-4">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adjustment Type *</label>
-                <select 
-                  required 
-                  value={formData.type} 
-                  onChange={e => setFormData({...formData, type: e.target.value})} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="ADJUSTMENT">General Adjustment (+/-)</option>
-                  <option value="DAMAGE">Damage (Reduces Stock, use negative)</option>
-                  <option value="RETURN">Return (Increases Stock, use positive)</option>
-                </select>
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity Change * (Use negative to reduce)</label>
-                <input 
-                  type="number" 
-                  required 
-                  value={formData.quantity} 
-                  onChange={e => setFormData({...formData, quantity: e.target.value})} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md" 
-                  placeholder="e.g., 5 or -2" 
-                />
+            <form onSubmit={handleAdjustment} className="px-6 py-5">
+              {/* Product Info Card */}
+              <div className="mb-4 p-3.5 bg-blue-50/70 border border-blue-100 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Product</p>
+                  <p className="text-base font-bold text-gray-900">{selectedProduct.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-gray-500">Current Stock</p>
+                  <p className="text-base font-black text-blue-900">
+                    {selectedProduct.currentStock} {selectedProduct.unit || 'units'}
+                  </p>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason / Notes</label>
-                <textarea 
+              {/* Action Selection Tabs (Add Stock vs Remove Stock) */}
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  Adjustment Type *
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 p-1 bg-gray-100 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setAdjustmentAction('ADD')}
+                    className={`py-2.5 px-3 rounded-md text-sm font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      adjustmentAction === 'ADD'
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>➕ Add Stock</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdjustmentAction('REMOVE')}
+                    className={`py-2.5 px-3 rounded-md text-sm font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      adjustmentAction === 'REMOVE'
+                        ? 'bg-red-600 text-white shadow'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>➖ Remove Stock</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quantity Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-800 mb-1">
+                  {adjustmentAction === 'ADD' ? 'Quantity to Add *' : 'Quantity to Remove *'}
+                </label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    min="0.01"
+                    step="any"
+                    required 
+                    value={formData.quantity} 
+                    onChange={e => setFormData({ ...formData, quantity: e.target.value })} 
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-base font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" 
+                    placeholder={adjustmentAction === 'ADD' ? 'e.g., 10' : 'e.g., 5 (no minus sign needed)'} 
+                    autoFocus
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-sm font-medium text-gray-400 pointer-events-none">
+                    {selectedProduct.unit || 'units'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  {adjustmentAction === 'REMOVE' 
+                    ? '💡 Minus (-) lagane ki zaroorat nahi hai, system khud stock kam karega.' 
+                    : '💡 Yeh quantity seedha current stock mein jama ho jayegi.'}
+                </p>
+              </div>
+
+              {/* Live Preview Box */}
+              {Number(formData.quantity) > 0 && (
+                <div className={`mb-4 p-3 rounded-lg border text-xs flex items-center justify-between ${
+                  adjustmentAction === 'ADD'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div>
+                    <span className="font-semibold">Calculation: </span>
+                    <span>
+                      {selectedProduct.currentStock} {adjustmentAction === 'ADD' ? '+' : '-'} {Number(formData.quantity)}
+                    </span>
+                  </div>
+                  <div className="font-bold text-sm">
+                    New Stock: <span className="underline">
+                      {adjustmentAction === 'ADD'
+                        ? selectedProduct.currentStock + Number(formData.quantity)
+                        : selectedProduct.currentStock - Number(formData.quantity)
+                      } {selectedProduct.unit || 'units'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Reason Suggestions & Input */}
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason / Notes (Optional)</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {(adjustmentAction === 'ADD'
+                    ? ['Restock / Extra', 'Supplier Return', 'Physical Count Correction']
+                    : ['Damage / Wastage', 'Expired', 'Missing / Count Correction']
+                  ).map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, reason: tag })}
+                      className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-200 cursor-pointer transition"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                <input 
+                  type="text"
                   value={formData.reason} 
-                  onChange={e => setFormData({...formData, reason: e.target.value})} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md" 
-                  rows="3"
-                  placeholder="Optional context for this adjustment..."
-                ></textarea>
+                  onChange={e => setFormData({ ...formData, reason: e.target.value })} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-1 focus:ring-blue-500" 
+                  placeholder={adjustmentAction === 'ADD' ? 'e.g., Direct stock purchase' : 'e.g., Damaged during delivery'}
+                />
               </div>
               
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+              {/* Footer Buttons */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                  Confirm Adjustment
+                <button 
+                  type="submit" 
+                  disabled={adjusting || !formData.quantity}
+                  className={`px-5 py-2 rounded-lg shadow-sm text-sm font-bold text-white transition cursor-pointer disabled:opacity-50 ${
+                    adjustmentAction === 'ADD'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {adjusting 
+                    ? 'Updating...' 
+                    : adjustmentAction === 'ADD' 
+                      ? `➕ Confirm Add (+${Number(formData.quantity) || 0})` 
+                      : `➖ Confirm Remove (-${Number(formData.quantity) || 0})`
+                  }
                 </button>
               </div>
             </form>
