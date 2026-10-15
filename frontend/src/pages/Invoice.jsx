@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { FiPrinter, FiArrowLeft, FiShare2, FiEdit2 } from 'react-icons/fi';
+import { FiPrinter, FiArrowLeft, FiShare2, FiEdit2, FiCopy, FiCheck, FiX, FiDownload } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import { format } from 'date-fns';
 import html2canvas from 'html2canvas-pro';
 
@@ -16,6 +17,9 @@ const Invoice = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [previewBlob, setPreviewBlob] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -59,6 +63,15 @@ const Invoice = () => {
   const partyAddress = isSale ? data.customerId?.address : data.supplierId?.address;
   const invoiceNumber = isSale ? data.invoiceNumber : data.purchaseNumber;
 
+  const triggerDownload = (file, fileName) => {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const handleShare = async () => {
     if (isSharing) return;
     setIsSharing(true);
@@ -74,30 +87,51 @@ const Invoice = () => {
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
-      // 2. Allow React state update (button text change) and browser layout to settle completely
+      // 2. Allow React state update and browser layout to settle completely
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // 3. Snapshot with 2x Retina scale and fixed 380px container geometry
+      // 3. Snapshot with 2x Retina scale and fixed container geometry
       const canvas = await html2canvas(element, {
         scale: 2, // 2x Retina scale for crystal clear, sharp borders and typography
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
+        x: 0,
+        y: 0,
         scrollX: 0,
         scrollY: 0,
         windowWidth: 420,
         onclone: (clonedDoc) => {
+          if (clonedDoc.defaultView) {
+            clonedDoc.defaultView.scrollTo(0, 0);
+          }
+          const styleEl = clonedDoc.createElement('style');
+          styleEl.textContent = `
+            #printable-invoice {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+              color: #000000 !important;
+              background-color: #ffffff !important;
+            }
+            #printable-invoice table {
+              border-collapse: collapse !important;
+            }
+            #printable-invoice th, #printable-invoice td {
+              color: #000000 !important;
+            }
+          `;
+          clonedDoc.head.appendChild(styleEl);
+
           const clonedElement = clonedDoc.getElementById('printable-invoice');
           if (clonedElement) {
             clonedElement.style.width = '380px';
             clonedElement.style.maxWidth = '380px';
             clonedElement.style.minWidth = '380px';
             clonedElement.style.boxSizing = 'border-box';
-            clonedElement.style.padding = '24px';
+            clonedElement.style.padding = '22px';
             clonedElement.style.margin = '0 auto';
             clonedElement.style.backgroundColor = '#ffffff';
             clonedElement.style.boxShadow = 'none';
-            clonedElement.style.borderRadius = '12px';
+            clonedElement.style.borderRadius = '8px';
             clonedElement.style.border = '1px solid #e5e7eb';
           }
         }
@@ -112,59 +146,78 @@ const Invoice = () => {
         lastModified: Date.now(),
       });
 
-      const triggerDownload = () => {
-        const url = URL.createObjectURL(file);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.click();
-        URL.revokeObjectURL(url);
-      };
+      const imgUrl = URL.createObjectURL(blob);
+      setPreviewBlob(blob);
+      setPreviewImage(imgUrl);
 
-      // Check if browser supports sharing files (Mobile devices)
+      // Check if browser supports native file sharing (e.g. Safari on iOS, Chrome on Android)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
             files: [file],
             title: `Invoice ${invoiceNumber}`,
           });
+          // User shared successfully through native share sheet
+          setPreviewImage(null);
           return;
         } catch (shareErr) {
-          // If user cancelled the share dialog, do not download
           if (shareErr.name === 'AbortError') {
+            // User dismissed share dialog
+            setPreviewImage(null);
             return;
           }
-          // Some Android devices fail with mixed metadata, retry with files only
-          try {
-            await navigator.share({ files: [file] });
-            return;
-          } catch (retryErr) {
-            if (retryErr.name === 'AbortError') return;
-            triggerDownload();
-          }
         }
-      } else if (navigator.share) {
-        // Fallback for browsers that support text share only
-        try {
-          await navigator.share({
-            title: `Invoice ${invoiceNumber}`,
-            text: `Invoice ${invoiceNumber} from Hamdan Traders`,
-          });
-        } catch (textShareErr) {
-          if (textShareErr.name !== 'AbortError') {
-            triggerDownload();
-          }
-        }
-      } else {
-        // Desktop or browsers without Web Share API
-        triggerDownload();
       }
+
+      // If browser doesn't support direct file sharing (like Chrome on iPhone, or desktop):
+      // The preview modal stays open allowing them to Copy Image, WhatsApp text share, or Download!
     } catch (error) {
       console.error('Error sharing image:', error);
       alert('Failed to generate receipt image: ' + error.message);
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const handleCopyImage = async () => {
+    try {
+      if (navigator.clipboard && window.ClipboardItem && previewBlob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': previewBlob })
+        ]);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } else {
+        alert('Please press and hold the receipt image below and select "Copy".');
+      }
+    } catch (err) {
+      console.warn('Clipboard copy error:', err);
+      alert('Could not copy automatically. Please press and hold the receipt image and tap "Copy".');
+    }
+  };
+
+  const handleWhatsAppTextShare = () => {
+    const customerName = data?.customerId?.name || 'Customer';
+    const text = `*INVOICE ${invoiceNumber}*\n` +
+      `*HAMDAN TRADERS*\n` +
+      `Contact: 0300-2970372\n` +
+      `Date: ${format(new Date(data.date), 'dd/MM/yyyy')}\n` +
+      `Customer: ${customerName}\n` +
+      (data.category ? `Category: ${data.category}\n` : '') +
+      `--------------------------\n` +
+      `*Grand Total: Rs. ${Number(data.grandTotal || 0).toLocaleString()}*\n` +
+      `Paid: Rs. ${Number(data.paid || 0).toLocaleString()}\n` +
+      `Remaining Balance: Rs. ${Number(data.remaining || 0).toLocaleString()}\n` +
+      `Status: ${data.status}\n` +
+      `--------------------------\n` +
+      `Thank you for your business!`;
+
+    const phone = data?.customerId?.phone ? data.customerId.phone.replace(/[^0-9]/g, '') : '';
+    const waUrl = phone
+      ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+
+    window.open(waUrl, '_blank');
   };
 
   return (
@@ -216,83 +269,109 @@ const Invoice = () => {
             width: '100%',
             maxWidth: '380px',
             boxSizing: 'border-box',
+            backgroundColor: '#ffffff',
+            color: '#000000',
           }}
         >
           {/* Header */}
-          <div className="text-center mb-3">
-            <h2 className="text-2xl font-black uppercase tracking-wide mb-1" style={{ letterSpacing: '0.03em' }}>
+          <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 4px 0', color: '#000000' }}>
               HAMDAN TRADERS
             </h2>
-            <p className="text-xs font-normal mb-1">
+            <p style={{ fontSize: '12px', fontWeight: 'normal', margin: '0 0 4px 0', color: '#000000' }}>
               Contact at : 0300-2970372
             </p>
-            <p className="text-xs font-bold uppercase tracking-wider">
+            <p style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, color: '#000000' }}>
               DELIVERY AVAILABLE
             </p>
           </div>
 
-          <div className="border-b-[1.5px] border-black my-3" />
+          {/* Solid Separator */}
+          <div style={{ borderBottom: '2px solid #000000', margin: '10px 0', width: '100%', height: 0 }} />
 
           {/* Invoice & Party Metadata */}
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-baseline">
-              <span className="w-[85px] shrink-0 font-bold">Invoice #:</span>
-              <span className="flex-1">{invoiceNumber}</span>
-            </div>
-            <div className="flex items-baseline">
-              <span className="w-[85px] shrink-0 font-bold">Date:</span>
-              <span className="flex-1">{format(new Date(data.date), 'dd/MM/yyyy')}</span>
-            </div>
-            <div className="flex items-baseline">
-              <span className="w-[85px] shrink-0 font-bold">Time:</span>
-              <span className="flex-1">{format(new Date(data.date), 'hh:mm a')}</span>
-            </div>
-            {isSale && data.category && (
-              <div className="flex items-baseline">
-                <span className="w-[85px] shrink-0 font-bold">Category:</span>
-                <span className="flex-1">{data.category}</span>
-              </div>
-            )}
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#000000', marginBottom: '6px' }}>
+            <tbody>
+              <tr>
+                <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>Invoice #:</td>
+                <td style={{ padding: '2px 0', verticalAlign: 'top' }}>{invoiceNumber}</td>
+              </tr>
+              <tr>
+                <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>Date:</td>
+                <td style={{ padding: '2px 0', verticalAlign: 'top' }}>{format(new Date(data.date), 'dd/MM/yyyy')}</td>
+              </tr>
+              <tr>
+                <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>Time:</td>
+                <td style={{ padding: '2px 0', verticalAlign: 'top' }}>{format(new Date(data.date), 'hh:mm a')}</td>
+              </tr>
+              {isSale && data.category && (
+                <tr>
+                  <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>Category:</td>
+                  <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: 'bold' }}>{data.category}</td>
+                </tr>
+              )}
 
-            {partyName && (
-              <>
-                <div className="border-t border-dashed border-black my-2.5" />
-                <div className="flex items-start">
-                  <span className="w-[85px] shrink-0 font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
-                  <span className="flex-1 leading-tight break-words">{partyName}</span>
-                </div>
-                {partyPhone && (
-                  <div className="flex items-baseline">
-                    <span className="w-[85px] shrink-0 font-bold">Phone:</span>
-                    <span className="flex-1">{partyPhone}</span>
-                  </div>
-                )}
-                {partyAddress && (
-                  <div className="flex items-start">
-                    <span className="w-[85px] shrink-0 font-bold">Address:</span>
-                    <span className="flex-1 text-[11px] leading-tight break-words">{partyAddress}</span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+              {partyName && (
+                <>
+                  <tr>
+                    <td colSpan={2} style={{ padding: '5px 0' }}>
+                      <div style={{ borderBottom: '1px dashed #000000', width: '100%', height: 0 }} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>
+                      {isSale ? 'Customer:' : 'Supplier:'}
+                    </td>
+                    <td style={{ padding: '2px 0', verticalAlign: 'top', fontWeight: '600', wordBreak: 'break-word' }}>
+                      {partyName}
+                    </td>
+                  </tr>
+                  {partyPhone && (
+                    <tr>
+                      <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>Phone:</td>
+                      <td style={{ padding: '2px 0', verticalAlign: 'top' }}>{partyPhone}</td>
+                    </tr>
+                  )}
+                  {partyAddress && (
+                    <tr>
+                      <td style={{ width: '90px', fontWeight: 'bold', padding: '2px 0', verticalAlign: 'top' }}>Address:</td>
+                      <td style={{ padding: '2px 0', verticalAlign: 'top', fontSize: '11px', wordBreak: 'break-word' }}>
+                        {partyAddress}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )}
+            </tbody>
+          </table>
 
-          <div className="border-b-[1.5px] border-black my-3" />
+          {/* Solid Separator */}
+          <div style={{ borderBottom: '2px solid #000000', margin: '10px 0', width: '100%', height: 0 }} />
 
           {/* Boxed Items Table */}
-          <table className="w-full text-xs border-collapse border border-black mb-3">
+          <table 
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              border: '1.5px solid #000000',
+              tableLayout: 'fixed',
+              fontSize: '11.5px',
+              color: '#000000',
+              marginBottom: '12px'
+            }}
+          >
             <thead>
-              <tr className="border-b border-black">
-                <th className="py-1.5 px-2 text-left font-bold border-r border-black" style={{ width: '40%' }}>
+              <tr style={{ backgroundColor: '#f9fafb' }}>
+                <th style={{ width: '42%', border: '1px solid #000000', padding: '6px 5px', textAlign: 'left', fontWeight: 'bold' }}>
                   Item
                 </th>
-                <th className="py-1.5 px-1 text-center font-bold border-r border-black" style={{ width: '18%' }}>
+                <th style={{ width: '18%', border: '1px solid #000000', padding: '6px 3px', textAlign: 'center', fontWeight: 'bold' }}>
                   Rate
                 </th>
-                <th className="py-1.5 px-1 text-center font-bold border-r border-black" style={{ width: '16%' }}>
+                <th style={{ width: '15%', border: '1px solid #000000', padding: '6px 3px', textAlign: 'center', fontWeight: 'bold' }}>
                   Qty
                 </th>
-                <th className="py-1.5 px-2 text-center font-bold" style={{ width: '26%' }}>
+                <th style={{ width: '25%', border: '1px solid #000000', padding: '6px 5px', textAlign: 'right', fontWeight: 'bold' }}>
                   Amount
                 </th>
               </tr>
@@ -302,17 +381,17 @@ const Invoice = () => {
                 const price = isSale ? item.price : item.cost;
                 const total = (price || 0) * item.quantity;
                 return (
-                  <tr key={index} className="border-b border-black last:border-b-0">
-                    <td className="py-2 px-2 align-top text-left border-r border-black">
-                      <div className="font-bold leading-tight">{item.productId?.name || 'Unknown Product'}</div>
+                  <tr key={index}>
+                    <td style={{ border: '1px solid #000000', padding: '6px 5px', textAlign: 'left', verticalAlign: 'top', fontWeight: 'bold', wordBreak: 'break-word' }}>
+                      {item.productId?.name || 'Unknown Product'}
                     </td>
-                    <td className="py-2 px-1 align-top text-center font-normal border-r border-black">
+                    <td style={{ border: '1px solid #000000', padding: '6px 3px', textAlign: 'center', verticalAlign: 'top' }}>
                       {price?.toLocaleString()}
                     </td>
-                    <td className="py-2 px-1 align-top text-center font-normal border-r border-black">
+                    <td style={{ border: '1px solid #000000', padding: '6px 3px', textAlign: 'center', verticalAlign: 'top' }}>
                       {item.quantity}
                     </td>
-                    <td className="py-2 px-2 align-top text-center font-normal">
+                    <td style={{ border: '1px solid #000000', padding: '6px 5px', textAlign: 'right', verticalAlign: 'top' }}>
                       Rs. {total.toLocaleString()}
                     </td>
                   </tr>
@@ -321,57 +400,149 @@ const Invoice = () => {
             </tbody>
           </table>
 
-          {/* Totals Section */}
-          <div className="flex justify-end mb-3">
-            <div className="w-[62%] space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="font-bold">Subtotal:</span>
-                <span>Rs. {data.subtotal?.toLocaleString()}</span>
-              </div>
-              {data.discount > 0 && (
-                <div className="flex justify-between">
-                  <span className="font-bold">Discount:</span>
-                  <span>- Rs. {data.discount?.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-baseline font-bold text-sm">
-                <span className="font-black text-sm">TOTAL:</span>
-                <span className="font-black text-sm">Rs. {data.grandTotal?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-bold">Paid:</span>
-                <span>Rs. {data.paid?.toLocaleString()}</span>
-              </div>
-              <div className="border-t border-dashed border-black my-1" />
-              <div className="flex justify-between font-bold">
-                <span>Balance:</span>
-                <span>Rs. {data.remaining?.toLocaleString()}</span>
-              </div>
-            </div>
+          {/* Totals Section (Right Aligned Table) */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '10px' }}>
+            <table style={{ width: '65%', borderCollapse: 'collapse', fontSize: '12px', color: '#000000' }}>
+              <tbody>
+                <tr>
+                  <td style={{ textAlign: 'left', fontWeight: 'bold', padding: '3px 0' }}>Subtotal:</td>
+                  <td style={{ textAlign: 'right', padding: '3px 0' }}>Rs. {data.subtotal?.toLocaleString()}</td>
+                </tr>
+                {data.discount > 0 && (
+                  <tr>
+                    <td style={{ textAlign: 'left', fontWeight: 'bold', padding: '3px 0' }}>Discount:</td>
+                    <td style={{ textAlign: 'right', padding: '3px 0' }}>- Rs. {data.discount?.toLocaleString()}</td>
+                  </tr>
+                )}
+                <tr>
+                  <td style={{ textAlign: 'left', fontWeight: '900', fontSize: '13.5px', padding: '4px 0' }}>TOTAL:</td>
+                  <td style={{ textAlign: 'right', fontWeight: '900', fontSize: '13.5px', padding: '4px 0' }}>Rs. {data.grandTotal?.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'left', fontWeight: 'bold', padding: '3px 0' }}>Paid:</td>
+                  <td style={{ textAlign: 'right', padding: '3px 0' }}>Rs. {data.paid?.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <td colSpan={2} style={{ padding: '4px 0' }}>
+                    <div style={{ borderBottom: '1px dashed #000000', width: '100%', height: 0 }} />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: 'left', fontWeight: 'bold', padding: '3px 0' }}>Balance:</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '3px 0' }}>Rs. {data.remaining?.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <div className="border-b-[1.5px] border-black my-3" />
+          {/* Solid Separator */}
+          <div style={{ borderBottom: '2px solid #000000', margin: '10px 0', width: '100%', height: 0 }} />
 
           {/* Status Section */}
-          <div className="space-y-1.5 text-xs">
-            <div className="flex justify-between items-baseline">
-              <span className="font-bold">Status:</span>
-              <span className="font-bold text-sm">
-                {data.status === 'PAID' ? 'Paid' : data.status === 'PARTIAL' ? 'Partial' : 'Unpaid'}
-              </span>
-            </div>
-          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#000000', margin: '4px 0' }}>
+            <tbody>
+              <tr>
+                <td style={{ textAlign: 'left', fontWeight: 'bold', padding: '2px 0' }}>Status:</td>
+                <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '13.5px', padding: '2px 0' }}>
+                  {data.status === 'PAID' ? 'Paid' : data.status === 'PARTIAL' ? 'Partial' : 'Unpaid'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-          <div className="border-t border-dashed border-black my-3" />
+          {/* Dashed Separator */}
+          <div style={{ borderBottom: '1px dashed #000000', margin: '10px 0', width: '100%', height: 0 }} />
 
           {/* Footer */}
-          <div className="text-center mt-3 text-xs space-y-1">
-            <p className="font-bold italic text-xs">Behtareen Taste, Hamesha Aapke Sath!</p>
-            <p className="text-[11px] text-gray-800">Thank you for your business.</p>
-            <p className="text-[10px] font-bold text-gray-800 mt-2.5">-- Powered By: www.corevex.tech --</p>
+          <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', color: '#000000' }}>
+            <p style={{ fontWeight: 'bold', fontStyle: 'italic', margin: '0 0 3px 0', fontSize: '12px' }}>
+              Behtareen Taste, Hamesha Aapke Sath!
+            </p>
+            <p style={{ fontSize: '11px', color: '#374151', margin: '0 0 6px 0' }}>
+              Thank you for your business.
+            </p>
+            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#4b5563', margin: 0 }}>
+              -- Powered By: www.corevex.tech --
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Receipt Image Share & Preview Modal (Vital for iPhone Chrome & Desktop) */}
+      {previewImage && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col my-auto border border-gray-100 animate-in fade-in duration-200">
+            {/* Modal Header */}
+            <div className="px-4 py-3 bg-gray-900 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🧾</span>
+                <span className="font-bold text-sm">Receipt Image Ready</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="text-gray-300 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
+                title="Close"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            {/* iPhone Hint Banner */}
+            <div className="bg-blue-50 px-4 py-2.5 border-b border-blue-100 text-xs text-blue-900 leading-snug">
+              <span className="font-bold">📱 iPhone Tip:</span> Press & hold the receipt image below to <strong>Share / Copy</strong> directly to WhatsApp, or use the buttons below!
+            </div>
+
+            {/* Receipt Image Preview Container */}
+            <div className="p-4 bg-gray-100 flex justify-center items-center max-h-[50vh] overflow-y-auto">
+              <img
+                src={previewImage}
+                alt={`Invoice ${invoiceNumber}`}
+                className="rounded-lg shadow-md max-w-full h-auto select-auto"
+                style={{ WebkitTouchCallout: 'default' }}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="p-4 bg-white space-y-2">
+              <button
+                type="button"
+                onClick={handleCopyImage}
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                {copied ? <FiCheck className="text-green-300 text-base" /> : <FiCopy className="text-base" />}
+                {copied ? 'Image Copied to Clipboard!' : 'Copy Image to Clipboard'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleWhatsAppTextShare}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                <FaWhatsapp className="text-lg" />
+                Share on WhatsApp (Summary)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => triggerDownload(previewBlob, `${invoiceNumber}.png`)}
+                className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-xl text-sm flex items-center justify-center gap-2 border border-gray-200 transition-colors cursor-pointer"
+              >
+                <FiDownload className="text-base" />
+                Download Image (PNG)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="w-full py-1.5 text-xs text-gray-500 hover:text-gray-700 text-center font-medium cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
