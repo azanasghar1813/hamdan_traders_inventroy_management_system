@@ -70,13 +70,37 @@ const Invoice = () => {
     }
 
     try {
+      // 1. Wait for custom fonts to be fully loaded and ready
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      // 2. Allow React state update (button text change) and browser layout to settle completely
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // 3. Snapshot with 2x Retina scale and fixed 380px container geometry
       const canvas = await html2canvas(element, {
-        scale: 1.5,
+        scale: 2, // 2x Retina scale for crystal clear, sharp borders and typography
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
-        imageTimeout: 1000,
-        removeContainer: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 420,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.getElementById('printable-invoice');
+          if (clonedElement) {
+            clonedElement.style.width = '380px';
+            clonedElement.style.maxWidth = '380px';
+            clonedElement.style.minWidth = '380px';
+            clonedElement.style.boxSizing = 'border-box';
+            clonedElement.style.padding = '24px';
+            clonedElement.style.margin = '0 auto';
+            clonedElement.style.backgroundColor = '#ffffff';
+            clonedElement.style.boxShadow = 'none';
+            clonedElement.style.borderRadius = '12px';
+            clonedElement.style.border = '1px solid #e5e7eb';
+          }
+        }
       });
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -211,36 +235,36 @@ const Invoice = () => {
 
           {/* Invoice & Party Metadata */}
           <div className="space-y-1.5 text-xs">
-            <div className="grid grid-cols-[85px_1fr] items-baseline">
-              <span className="font-bold">Invoice #:</span>
-              <span>{invoiceNumber}</span>
+            <div className="flex items-baseline">
+              <span className="w-[85px] shrink-0 font-bold">Invoice #:</span>
+              <span className="flex-1">{invoiceNumber}</span>
             </div>
-            <div className="grid grid-cols-[85px_1fr] items-baseline">
-              <span className="font-bold">Date:</span>
-              <span>{format(new Date(data.date), 'dd/MM/yyyy')}</span>
+            <div className="flex items-baseline">
+              <span className="w-[85px] shrink-0 font-bold">Date:</span>
+              <span className="flex-1">{format(new Date(data.date), 'dd/MM/yyyy')}</span>
             </div>
-            <div className="grid grid-cols-[85px_1fr] items-baseline">
-              <span className="font-bold">Time:</span>
-              <span>{format(new Date(data.date), 'hh:mm a')}</span>
+            <div className="flex items-baseline">
+              <span className="w-[85px] shrink-0 font-bold">Time:</span>
+              <span className="flex-1">{format(new Date(data.date), 'hh:mm a')}</span>
             </div>
 
             {partyName && (
               <>
                 <div className="border-t border-dashed border-black my-2.5" />
-                <div className="grid grid-cols-[85px_1fr] items-start">
-                  <span className="font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
-                  <span className="leading-tight break-words">{partyName}</span>
+                <div className="flex items-start">
+                  <span className="w-[85px] shrink-0 font-bold">{isSale ? 'Customer:' : 'Supplier:'}</span>
+                  <span className="flex-1 leading-tight break-words">{partyName}</span>
                 </div>
                 {partyPhone && (
-                  <div className="grid grid-cols-[85px_1fr] items-baseline">
-                    <span className="font-bold">Phone:</span>
-                    <span>{partyPhone}</span>
+                  <div className="flex items-baseline">
+                    <span className="w-[85px] shrink-0 font-bold">Phone:</span>
+                    <span className="flex-1">{partyPhone}</span>
                   </div>
                 )}
                 {partyAddress && (
-                  <div className="grid grid-cols-[85px_1fr] items-start">
-                    <span className="font-bold">Address:</span>
-                    <span className="text-[11px] leading-tight break-words">{partyAddress}</span>
+                  <div className="flex items-start">
+                    <span className="w-[85px] shrink-0 font-bold">Address:</span>
+                    <span className="flex-1 text-[11px] leading-tight break-words">{partyAddress}</span>
                   </div>
                 )}
               </>
