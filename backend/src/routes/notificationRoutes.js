@@ -4,7 +4,8 @@ const {
   getVapidPublicKey,
   subscribe,
   unsubscribe,
-  sendTest
+  sendTest,
+  triggerDailySummary
 } = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -12,5 +13,6 @@ router.get('/vapid-key', protect, getVapidPublicKey);
 router.post('/subscribe', protect, subscribe);
 router.post('/unsubscribe', protect, unsubscribe);
 router.post('/test', protect, sendTest);
+router.post('/daily-summary', protect, triggerDailySummary);
 
 module.exports = router;

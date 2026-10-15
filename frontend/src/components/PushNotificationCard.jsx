@@ -5,9 +5,10 @@ import {
   getExistingSubscription,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
-  sendTestPushNotification
+  sendTestPushNotification,
+  triggerDailySummaryPush
 } from '../utils/pushManager';
-import { FiBell, FiCheckCircle, FiAlertCircle, FiSend, FiX, FiSmartphone } from 'react-icons/fi';
+import { FiBell, FiCheckCircle, FiAlertCircle, FiSend, FiX, FiSmartphone, FiCalendar } from 'react-icons/fi';
 
 const PushNotificationCard = ({ compact = false }) => {
   const [supported, setSupported] = useState(false);
@@ -85,6 +86,34 @@ const PushNotificationCard = ({ compact = false }) => {
     }
   };
 
+  const handleSendDailySummary = async () => {
+    setLoading(true);
+    setTestStatus(null);
+    setErrorMessage('');
+    try {
+      const res = await triggerDailySummaryPush();
+      if (res.success) {
+        if (res.result?.count > 0) {
+          setTestStatus({
+            type: 'success',
+            message: `📲 Rozana 5 PM Summary alert sent (${res.result.count} low-stock items)! Check your phone.`
+          });
+        } else {
+          setTestStatus({
+            type: 'success',
+            message: '✅ Sab items ka stock currently theek hai (no low stock). Is liye alert skip hua.'
+          });
+        }
+      } else {
+        setErrorMessage(res.message || 'Daily summary trigger failed');
+      }
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || err.message || 'Failed to trigger summary');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!supported) {
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 flex items-start space-x-3">
@@ -155,15 +184,21 @@ const PushNotificationCard = ({ compact = false }) => {
               )}
             </div>
             <p className="text-sm text-indigo-200 mt-1 max-w-xl">
-              Jab bhi kisi item ka stock kam hoga, aapke mobile par foran sound aur vibration ke sath notification aayegi:
+              <strong>⚡ Instant Alerts:</strong> Sale ke waqt kisi bhi item ka stock low hone par foran notification.<br />
+              <strong>📋 Daily Report (5:00 PM PKT):</strong> Rozana theek 5:00 PM tamam low-stock items ki consolidated summary.
             </p>
-            <p className="text-xs text-amber-200/90 font-mono mt-1 bg-black/25 px-2.5 py-1 rounded inline-block border border-amber-400/20">
-              🚨 Malai Topping ka stock kam ho gaya hai! Baqi sirf 4 boxes reh gaye hain.
-            </p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="text-xs text-amber-200/90 font-mono bg-black/25 px-2.5 py-1 rounded border border-amber-400/20">
+                ⚡ Malai Topping ka stock kam ho gaya hai! Baqi sirf 4 boxes reh gaye hain.
+              </span>
+              <span className="text-xs text-emerald-200/90 font-mono bg-black/25 px-2.5 py-1 rounded border border-emerald-400/20">
+                📋 Rozana Low Stock Report (5:00 PM): Total 3 items ka stock kam hai...
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {!isSubscribed ? (
             <button
               onClick={handleSubscribe}
@@ -178,15 +213,25 @@ const PushNotificationCard = ({ compact = false }) => {
               <button
                 onClick={handleSendTest}
                 disabled={loading}
-                className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white font-medium rounded-lg border border-white/20 backdrop-blur-sm transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-lg border border-white/20 backdrop-blur-sm transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                title="Instant low-stock alert test karein"
               >
-                <FiSend className="w-4 h-4 text-indigo-200" />
-                <span>{loading ? 'Sending...' : '⚡ Send Test Notification'}</span>
+                <FiSend className="w-3.5 h-3.5 text-indigo-200" />
+                <span>{loading ? 'Sending...' : '⚡ Test Instant Alert'}</span>
+              </button>
+              <button
+                onClick={handleSendDailySummary}
+                disabled={loading}
+                className="px-3.5 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs font-semibold rounded-lg border border-emerald-400/30 backdrop-blur-sm transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                title="Rozana 5:00 PM wala summary alert abhi test karein"
+              >
+                <FiCalendar className="w-3.5 h-3.5 text-emerald-300" />
+                <span>{loading ? 'Checking...' : '📋 Test 5 PM Summary'}</span>
               </button>
               <button
                 onClick={handleUnsubscribe}
                 disabled={loading}
-                className="text-xs text-indigo-300 hover:text-red-300 underline cursor-pointer px-2 py-1"
+                className="text-xs text-indigo-300 hover:text-red-300 underline cursor-pointer px-2 py-1 ml-1"
               >
                 Disable
               </button>

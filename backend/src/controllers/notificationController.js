@@ -112,9 +112,28 @@ const sendTest = async (req, res) => {
   }
 };
 
+// @desc    Manually trigger daily low-stock summary push
+// @route   POST /api/notifications/daily-summary
+// @access  Private
+const triggerDailySummary = async (req, res) => {
+  try {
+    const { sendDailyLowStockSummary } = require('../utils/scheduler');
+    const result = await sendDailyLowStockSummary();
+    res.json({
+      success: true,
+      message: 'Daily low stock summary executed',
+      result
+    });
+  } catch (error) {
+    console.error('triggerDailySummary error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getVapidPublicKey,
   subscribe,
   unsubscribe,
-  sendTest
+  sendTest,
+  triggerDailySummary
 };

@@ -122,3 +122,12 @@ export async function sendTestPushNotification() {
   const { data } = await api.post('/notifications/test');
   return data;
 }
+
+/**
+ * Trigger daily low-stock summary push on demand
+ */
+export async function triggerDailySummaryPush() {
+  const { data } = await api.post('/notifications/daily-summary');
+  return data;
+}
+
