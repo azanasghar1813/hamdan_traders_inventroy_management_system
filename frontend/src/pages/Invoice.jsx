@@ -200,7 +200,7 @@ const Invoice = () => {
     const customerName = data?.customerId?.name || 'Customer';
     const text = `*INVOICE ${invoiceNumber}*\n` +
       `*HAMDAN TRADERS*\n` +
-      `Contact: 0300-2970372\n` +
+      `Contact at: 0300-2970372\n` +
       `Date: ${format(new Date(data.date), 'dd/MM/yyyy')}\n` +
       `Customer: ${customerName}\n` +
       (data.category ? `Category: ${data.category}\n` : '') +
@@ -349,7 +349,7 @@ const Invoice = () => {
           <div style={{ borderBottom: '2px solid #000000', margin: '10px 0', width: '100%', height: 0 }} />
 
           {/* Boxed Items Table */}
-          <table 
+          <table
             style={{
               width: '100%',
               borderCollapse: 'collapse',
